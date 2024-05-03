@@ -739,7 +739,7 @@ const unwantedSymbols = [
   };
 
   private placeOrderBatch = async (payloads: any[]) => {
-    const lots = chunk(payloads, 25);
+    const lots = chunk(payloads, 5);
     const orderIds = [] as string[];
 
     for (const lot of lots) {
