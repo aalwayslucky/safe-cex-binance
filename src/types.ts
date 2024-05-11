@@ -161,6 +161,7 @@ export type PlaceOrderOpts = {
   readonly takeProfit?: number;
   readonly reduceOnly?: boolean;
   readonly timeInForce?: OrderTimeInForce;
+  readonly newClientOrderId?: string;
 };
 
 export type UpdateOrderOpts = {

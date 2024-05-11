@@ -674,7 +674,7 @@ export class BinanceExchange extends BaseExchange {
     // otherwise Binance will duplicate the IDs
     // when its sent in batches
     for (const payload of payloads) {
-      payload.newClientOrderId = uuid();
+      payload.newClientOrderId = opts.newClientOrderId || uuid();
     }
 
     return payloads;
