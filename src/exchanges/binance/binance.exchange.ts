@@ -1,5 +1,6 @@
 import type { Axios } from "axios";
 import rateLimit from "axios-rate-limit";
+import Bottleneck from "bottleneck";
 import type { ManipulateType } from "dayjs";
 import dayjs from "dayjs";
 import chunk from "lodash/chunk";
@@ -52,7 +53,8 @@ export class BinanceExchange extends BaseExchange {
 
   xhr: Axios;
   unlimitedXHR: Axios;
-
+  limiterPerSecond: Bottleneck;
+  limiterPerMinute: Bottleneck;
   publicWebsocket: BinancePublicWebsocket;
   privateWebsocket: BinancePrivateWebsocket;
 
@@ -61,7 +63,16 @@ export class BinanceExchange extends BaseExchange {
 
     this.xhr = rateLimit(createAPI(opts), { maxRPS: 3 });
     this.unlimitedXHR = createAPI(opts);
+    this.limiterPerSecond = new Bottleneck({
+      maxConcurrent: 1,
+      minTime: (10 * 1000) / 60, // 60 requests per 10 seconds
+    });
 
+    // Create a new limiter for 240 requests per minute
+    this.limiterPerMinute = new Bottleneck({
+      maxConcurrent: 1,
+      minTime: (60 * 1000) / 240, // 240 requests per minute
+    });
     this.publicWebsocket = new BinancePublicWebsocket(this);
     this.privateWebsocket = new BinancePrivateWebsocket(this);
   }
@@ -782,37 +793,47 @@ export class BinanceExchange extends BaseExchange {
     const lots = chunk(payloads, 5);
     const orderIds = [] as string[];
 
-    const promises = lots.map(async (lot) => {
-      if (lot.length === 1) {
-        try {
-          await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
-          orderIds.push(lot[0].newClientOrderId);
-        } catch (err: any) {
-          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
-        }
-      }
-
-      if (lot.length > 1) {
-        try {
-          const { data } = await this.unlimitedXHR.post(
-            ENDPOINTS.BATCH_ORDERS,
-            {
-              batchOrders: JSON.stringify(lot),
+    const promises = lots.map((lot) =>
+      this.limiterPerSecond.schedule(() =>
+        this.limiterPerMinute.schedule(async () => {
+          if (lot.length === 1) {
+            try {
+              await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
+              orderIds.push(lot[0].newClientOrderId);
+            } catch (err: any) {
+              this.emitter.emit(
+                "error",
+                err?.response?.data?.msg || err?.message
+              );
             }
-          );
+          }
 
-          data?.forEach?.((o: any) => {
-            if (o.code) {
-              this.emitter.emit("error", o.msg);
-            } else {
-              orderIds.push(o.clientOrderId);
+          if (lot.length > 1) {
+            try {
+              const { data } = await this.unlimitedXHR.post(
+                ENDPOINTS.BATCH_ORDERS,
+                {
+                  batchOrders: JSON.stringify(lot),
+                }
+              );
+
+              data?.forEach?.((o: any) => {
+                if (o.code) {
+                  this.emitter.emit("error", o.msg);
+                } else {
+                  orderIds.push(o.clientOrderId);
+                }
+              });
+            } catch (err: any) {
+              this.emitter.emit(
+                "error",
+                err?.response?.data?.msg || err?.message
+              );
             }
-          });
-        } catch (err: any) {
-          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
-        }
-      }
-    });
+          }
+        })
+      )
+    );
 
     await Promise.all(promises);
 
