@@ -785,10 +785,7 @@ export class BinanceExchange extends BaseExchange {
     const promises = lots.map(async (lot) => {
       if (lot.length === 1) {
         try {
-          const response = await this.unlimitedXHR.post(
-            ENDPOINTS.ORDER,
-            lot[0]
-          );
+          await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
           orderIds.push(lot[0].newClientOrderId);
         } catch (err: any) {
           this.emitter.emit("error", err?.response?.data?.msg || err?.message);
