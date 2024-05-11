@@ -578,6 +578,11 @@ export class BinanceExchange extends BaseExchange {
     return await this.placeOrderBatch(requests);
   };
 
+  placeOrdersFast = async (orders: PlaceOrderOpts[]) => {
+    const requests = orders.flatMap((o) => this.formatCreateOrder(o));
+    return await this.placeOrderBatchFast(requests);
+  };
+
   // eslint-disable-next-line complexity
   private formatCreateOrder = (opts: PlaceOrderOpts) => {
     if (opts.type === OrderType.TrailingStopLoss) {
@@ -769,6 +774,50 @@ export class BinanceExchange extends BaseExchange {
         });
       }
     }
+
+    return orderIds;
+  };
+
+  private placeOrderBatchFast = async (payloads: any[]) => {
+    const lots = chunk(payloads, 5);
+    const orderIds = [] as string[];
+
+    const promises = lots.map(async (lot) => {
+      if (lot.length === 1) {
+        try {
+          const response = await this.unlimitedXHR.post(
+            ENDPOINTS.ORDER,
+            lot[0]
+          );
+          orderIds.push(lot[0].newClientOrderId);
+        } catch (err: any) {
+          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+        }
+      }
+
+      if (lot.length > 1) {
+        try {
+          const { data } = await this.unlimitedXHR.post(
+            ENDPOINTS.BATCH_ORDERS,
+            {
+              batchOrders: JSON.stringify(lot),
+            }
+          );
+
+          data?.forEach?.((o: any) => {
+            if (o.code) {
+              this.emitter.emit("error", o.msg);
+            } else {
+              orderIds.push(o.clientOrderId);
+            }
+          });
+        } catch (err: any) {
+          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+        }
+      }
+    });
+
+    await Promise.all(promises);
 
     return orderIds;
   };
