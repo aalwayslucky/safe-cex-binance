@@ -5,10 +5,10 @@ export class TokenBucket {
   private tokens60s: number;
 
   constructor() {
-    this.capacity10s = 300; // Hard coded value
-    this.tokens10s = 290; // Starting value
-    this.capacity60s = 1200; // Hard coded value
-    this.tokens60s = 1100; // Starting value
+    this.capacity10s = 295; // Hard coded value
+    this.tokens10s = 150; // Starting value
+    this.capacity60s = 1195; // Hard coded value
+    this.tokens60s = 1000; // Starting value
     setInterval(() => this.addToken(), 1000);
   }
 
