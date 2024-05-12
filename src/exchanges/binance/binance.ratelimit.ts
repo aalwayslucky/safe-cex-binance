@@ -13,9 +13,9 @@ export class TokenBucket {
   }
 
   take(): boolean {
-    if (this.tokens10s > 0 && this.tokens60s > 0) {
-      this.tokens10s -= 1;
-      this.tokens60s -= 1;
+    if (this.tokens10s >= 5 && this.tokens60s >= 5) {
+      this.tokens10s -= 5;
+      this.tokens60s -= 5;
       return true;
     }
 
