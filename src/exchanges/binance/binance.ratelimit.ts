@@ -6,7 +6,14 @@ export class TokenBucket {
   constructor(config: TokenBucketConfig) {
     this.config = config;
 
-    setInterval(() => this.addToken(), 1000);
+    // Refill tokens every second for the oneSecond rule
+    setInterval(() => this.addToken('oneSecond'), 1000);
+
+    // Refill tokens every 10 seconds for the tenSeconds rule
+    setInterval(() => this.addToken('tenSeconds'), 10000);
+
+    // Refill tokens every 60 seconds for the sixtySeconds rule
+    setInterval(() => this.addToken('sixtySeconds'), 60000);
   }
 
   take(): boolean {
@@ -46,19 +53,8 @@ export class TokenBucket {
     });
   }
 
-  private addToken(): void {
-    if (this.config.oneSecond.startWithTokens < this.config.oneSecond.capacity)
-      this.config.oneSecond.startWithTokens += this.config.oneSecond.addTokens;
-    if (
-      this.config.tenSeconds.startWithTokens < this.config.tenSeconds.capacity
-    )
-      this.config.tenSeconds.startWithTokens +=
-        this.config.tenSeconds.addTokens;
-    if (
-      this.config.sixtySeconds.startWithTokens <
-      this.config.sixtySeconds.capacity
-    )
-      this.config.sixtySeconds.startWithTokens +=
-        this.config.sixtySeconds.addTokens;
+  private addToken(rule: 'oneSecond' | 'sixtySeconds' | 'tenSeconds'): void {
+    if (this.config[rule].startWithTokens < this.config[rule].capacity)
+      this.config[rule].startWithTokens += this.config[rule].addTokens;
   }
 }
