@@ -821,8 +821,27 @@ export class BinanceExchange extends BaseExchange {
   private placeOrderBatchFast = async (payloads: any[]) => {
     const lots = chunk(payloads, 5);
     const orderIds = [] as string[];
+    let requestCount = 0;
+    let lastRequestTime = Date.now();
 
     const promises = lots.map(async (lot) => {
+      const now = Date.now();
+      const timeSinceLastRequest = (now - lastRequestTime) / 1000; // seconds
+      lastRequestTime = now;
+
+      if (requestCount >= 60 && timeSinceLastRequest < 10) {
+        // 300 orders / 5 orders per request = 60 requests
+        const waitTime = 10 - timeSinceLastRequest; // seconds
+        await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
+      }
+
+      if (requestCount >= 240 && timeSinceLastRequest < 60) {
+        // 1200 orders / 5 orders per request = 240 requests
+        const waitTime = 60 - timeSinceLastRequest; // seconds
+        await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
+      }
+
+      requestCount++;
       if (lot.length === 1) {
         try {
           await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
