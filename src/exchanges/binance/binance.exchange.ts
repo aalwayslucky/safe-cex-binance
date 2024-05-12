@@ -68,7 +68,7 @@ export class BinanceExchange extends BaseExchange {
       maxRequests: 39,
       perMilliseconds: 10000,
     });
-    this.tokenBucket = new TokenBucket(); // Create token bucket instance
+    this.tokenBucket = new TokenBucket(opts.rateLimit);
 
     this.unlimitedXHR = createAPI(opts);
 
