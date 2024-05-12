@@ -14,17 +14,6 @@ import {
   RECV_WINDOW,
 } from "./binance.types";
 
-const RATE_LIMIT = {
-  maxRequestsPer10Seconds: 60,
-  maxRequestsPerMinute: 240,
-};
-
-const tokenBucket = {
-  tokens: RATE_LIMIT.maxRequestsPer10Seconds,
-  lastRefill: Date.now(),
-  refillRate: RATE_LIMIT.maxRequestsPer10Seconds / 10, // 10 seconds
-  maxTokens: RATE_LIMIT.maxRequestsPer10Seconds,
-};
 export const createAPI = (options: ExchangeOptions) => {
   const xhr = axios.create({
     baseURL: BASE_URL[options.testnet ? "testnet" : "livenet"],
@@ -45,27 +34,7 @@ export const createAPI = (options: ExchangeOptions) => {
     if (config.url === ENDPOINTS.LISTEN_KEY && !options.testnet) {
       return config;
     }
-    if (config.url === ENDPOINTS.BATCH_ORDERS) {
-      const now = Date.now();
-      const tokensAvailable = tokenBucket.tokens;
-      const timeSinceLastRefill = (now - tokenBucket.lastRefill) / 1000; // seconds
-      const tokensToRefill = Math.min(
-        tokenBucket.refillRate * timeSinceLastRefill,
-        tokenBucket.maxTokens - tokensAvailable
-      );
-      tokenBucket.tokens = Math.min(
-        tokenBucket.maxTokens,
-        tokensAvailable + tokensToRefill
-      );
-      tokenBucket.lastRefill = now;
 
-      if (tokenBucket.tokens < 1) {
-        const waitTime = tokenBucket.refillRate * 10 - timeSinceLastRefill; // 10 seconds
-        setTimeout(() => {}, waitTime * 1000);
-      }
-
-      tokenBucket.tokens--;
-    }
     // don't sign requests if no API key is provided
     // and don't add the timeout option
     if (PUBLIC_ENDPOINTS.some((str) => config.url?.startsWith(str))) {
