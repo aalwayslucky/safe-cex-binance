@@ -94,23 +94,28 @@ class OrderQueueManager {
 
       // Send the batch orders to the API
       try {
-        const { data } = await this.unlimitedXHR.post(this.endpoint, {
-          batchOrders: JSON.stringify(batch),
-        });
-        const clientOrderIds = data
-          ?.map?.((o: any) => {
-            if (o.code) {
-              this.emitter.emit('error', o.msg);
+        const promises = batch.map((order) =>
+          this.unlimitedXHR.post(this.endpoint, {
+            batchOrders: JSON.stringify(order),
+          })
+        );
+
+        const results = await Promise.all(promises);
+
+        const clientOrderIds = results
+          .map(({ data }) => {
+            if (data?.code) {
+              this.emitter.emit('error', data.msg);
               return null;
             }
-            return o.clientOrderId;
+            return data.clientOrderId;
           })
           .filter(Boolean);
+
         this.results.push(...clientOrderIds);
       } catch (error) {
         this.emitter.emit('error', 'Failed to submit batch:', error);
       }
-
       // Adjust sleeping time based on the remaining rate limit
       if (this.ordersPer10s <= 0 || this.ordersPer60s <= 0) {
         const waitTime = Math.max(
