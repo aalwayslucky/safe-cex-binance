@@ -1,7 +1,5 @@
 import type { Axios, AxiosInstance } from "axios";
 import rateLimit from "axios-rate-limit";
-import axiosThrottle from "axios-request-throttle";
-import Bottleneck from "bottleneck";
 import type { ManipulateType } from "dayjs";
 import dayjs from "dayjs";
 import chunk from "lodash/chunk";
@@ -49,11 +47,6 @@ import {
 import { BinancePrivateWebsocket } from "./binance.ws-private";
 import { BinancePublicWebsocket } from "./binance.ws-public";
 
-const sleep = (delay) => {
-  return new Promise(function (resolve) {
-    setTimeout(resolve, delay);
-  });
-};
 export class BinanceExchange extends BaseExchange {
   name = "BINANCE";
 
@@ -629,10 +622,6 @@ export class BinanceExchange extends BaseExchange {
     const requests = orders.flatMap((o) => this.formatCreateOrder(o));
     return await this.placeOrderBatchFast(requests);
   };
-  placeOrdersFastest = async (orders: PlaceOrderOpts[]) => {
-    const requests = orders.flatMap((o) => this.formatCreateOrder(o));
-    return await this.placeOrderBatchFastest(requests);
-  };
 
   // eslint-disable-next-line complexity
   private formatCreateOrder = (opts: PlaceOrderOpts) => {
@@ -846,45 +835,6 @@ export class BinanceExchange extends BaseExchange {
       if (lot.length > 1) {
         try {
           const { data } = await this.unlimitedXHR.post(
-            ENDPOINTS.BATCH_ORDERS,
-            {
-              batchOrders: JSON.stringify(lot),
-            }
-          );
-
-          data?.forEach?.((o: any) => {
-            if (o.code) {
-              this.emitter.emit("error", o.msg);
-            } else {
-              orderIds.push(o.clientOrderId);
-            }
-          });
-        } catch (err: any) {
-          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
-        }
-      }
-    }
-
-    return orderIds;
-  };
-
-  private placeOrderBatchFastest = async (payloads: any[]) => {
-    const lots = chunk(payloads, 5);
-    const orderIds = [] as string[];
-
-    for (const lot of lots) {
-      if (lot.length === 1) {
-        try {
-          await this.interceptedXHR.post(ENDPOINTS.ORDER, lot[0]);
-          orderIds.push(lot[0].newClientOrderId);
-        } catch (err: any) {
-          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
-        }
-      }
-
-      if (lot.length > 1) {
-        try {
-          const { data } = await this.interceptedXHR.post(
             ENDPOINTS.BATCH_ORDERS,
             {
               batchOrders: JSON.stringify(lot),
