@@ -24,10 +24,10 @@ export class TokenBucket {
 
   private addToken(): void {
     if (this.tokens10s < this.capacity10s) {
-      this.tokens10s += 1;
+      this.tokens10s = Math.min(this.tokens10s + 30, this.capacity10s);
     }
     if (this.tokens60s < this.capacity60s) {
-      this.tokens60s += 1;
+      this.tokens60s = Math.min(this.tokens60s + 20, this.capacity60s); // 1200 tokens per 60 seconds = 20 tokens per second
     }
   }
 }
