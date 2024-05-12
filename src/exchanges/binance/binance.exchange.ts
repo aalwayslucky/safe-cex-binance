@@ -52,7 +52,7 @@ export class BinanceExchange extends BaseExchange {
 
   xhr: Axios;
   unlimitedXHR: Axios;
-  interceptedXHR: AxiosInstance; // New property for intercepted requests
+  xhrBatchOrders: Axios; // New property for intercepted requests
   requestCounter: number = 0;
   lastRequestTime: number = 0;
   publicWebsocket: BinancePublicWebsocket;
@@ -62,18 +62,13 @@ export class BinanceExchange extends BaseExchange {
     super(opts, store);
 
     this.xhr = rateLimit(createAPI(opts), { maxRPS: 3 });
+    this.xhrBatchOrders = rateLimit(createAPI(opts), {
+      maxRequests: 60,
+      perMilliseconds: 1200,
+    });
+
     this.unlimitedXHR = createAPI(opts);
-    this.interceptedXHR = createAPI(opts);
-    this.interceptedXHR.interceptors.response.use(
-      async (response) => {
-        await this.checkRateLimit();
-        return response;
-      },
-      function (error) {
-        // Do something with response error
-        return Promise.reject(error);
-      }
-    );
+
     this.publicWebsocket = new BinancePublicWebsocket(this);
     this.privateWebsocket = new BinancePrivateWebsocket(this);
   }
@@ -853,7 +848,7 @@ export class BinanceExchange extends BaseExchange {
 
       if (lot.length > 1) {
         try {
-          const { data } = await this.unlimitedXHR.post(
+          const { data } = await this.xhrBatchOrders.post(
             ENDPOINTS.BATCH_ORDERS,
             {
               batchOrders: JSON.stringify(lot),
