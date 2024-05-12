@@ -1,5 +1,6 @@
-import type { Axios } from "axios";
+import type { Axios, AxiosInstance } from "axios";
 import rateLimit from "axios-rate-limit";
+import axiosThrottle from "axios-request-throttle";
 import Bottleneck from "bottleneck";
 import type { ManipulateType } from "dayjs";
 import dayjs from "dayjs";
@@ -48,13 +49,19 @@ import {
 import { BinancePrivateWebsocket } from "./binance.ws-private";
 import { BinancePublicWebsocket } from "./binance.ws-public";
 
+const sleep = (delay) => {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, delay);
+  });
+};
 export class BinanceExchange extends BaseExchange {
   name = "BINANCE";
 
   xhr: Axios;
   unlimitedXHR: Axios;
-  limiterPerSecond: Bottleneck;
-  limiterPerMinute: Bottleneck;
+  interceptedXHR: AxiosInstance; // New property for intercepted requests
+  requestCounter: number = 0;
+  lastRequestTime: number = 0;
   publicWebsocket: BinancePublicWebsocket;
   privateWebsocket: BinancePrivateWebsocket;
 
@@ -63,20 +70,49 @@ export class BinanceExchange extends BaseExchange {
 
     this.xhr = rateLimit(createAPI(opts), { maxRPS: 3 });
     this.unlimitedXHR = createAPI(opts);
-    this.limiterPerSecond = new Bottleneck({
-      maxConcurrent: 1,
-      minTime: (10 * 1000) / 60, // 60 requests per 10 seconds
-    });
-
-    // Create a new limiter for 240 requests per minute
-    this.limiterPerMinute = new Bottleneck({
-      maxConcurrent: 1,
-      minTime: (60 * 1000) / 240, // 240 requests per minute
-    });
+    this.interceptedXHR = createAPI(opts);
+    this.interceptedXHR.interceptors.response.use(
+      async (response) => {
+        await this.checkRateLimit();
+        return response;
+      },
+      function (error) {
+        // Do something with response error
+        return Promise.reject(error);
+      }
+    );
     this.publicWebsocket = new BinancePublicWebsocket(this);
     this.privateWebsocket = new BinancePrivateWebsocket(this);
   }
+  checkRateLimit = async () => {
+    const currentTime = Date.now();
+    if (
+      this.requestCounter >= 300 &&
+      currentTime - this.lastRequestTime < 10000
+    ) {
+      // If reached limit, wait for 10 seconds
+      const delay = 10000 - (currentTime - this.lastRequestTime);
+      await this.sleep(delay);
+      // Reset counters after delay
+      this.requestCounter = 0;
+      this.lastRequestTime = currentTime;
+    } else {
+      // Increment counter
+      this.requestCounter++;
+      if (currentTime - this.lastRequestTime >= 60000) {
+        // If more than a minute has passed, reset counters
+        this.requestCounter = 1;
+        this.lastRequestTime = currentTime;
+      }
+    }
+  };
 
+  // Sleep function
+  sleep = (delay: number) => {
+    return new Promise((resolve) => {
+      setTimeout(resolve, delay);
+    });
+  };
   dispose = () => {
     super.dispose();
     this.publicWebsocket.dispose();
@@ -593,6 +629,10 @@ export class BinanceExchange extends BaseExchange {
     const requests = orders.flatMap((o) => this.formatCreateOrder(o));
     return await this.placeOrderBatchFast(requests);
   };
+  placeOrdersFastest = async (orders: PlaceOrderOpts[]) => {
+    const requests = orders.flatMap((o) => this.formatCreateOrder(o));
+    return await this.placeOrderBatchFastest(requests);
+  };
 
   // eslint-disable-next-line complexity
   private formatCreateOrder = (opts: PlaceOrderOpts) => {
@@ -793,49 +833,76 @@ export class BinanceExchange extends BaseExchange {
     const lots = chunk(payloads, 5);
     const orderIds = [] as string[];
 
-    const promises = lots.map((lot) =>
-      this.limiterPerSecond.schedule(() =>
-        this.limiterPerMinute.schedule(async () => {
-          if (lot.length === 1) {
-            try {
-              await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
-              orderIds.push(lot[0].newClientOrderId);
-            } catch (err: any) {
-              this.emitter.emit(
-                "error",
-                err?.response?.data?.msg || err?.message
-              );
+    for (const lot of lots) {
+      if (lot.length === 1) {
+        try {
+          await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
+          orderIds.push(lot[0].newClientOrderId);
+        } catch (err: any) {
+          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+        }
+      }
+
+      if (lot.length > 1) {
+        try {
+          const { data } = await this.unlimitedXHR.post(
+            ENDPOINTS.BATCH_ORDERS,
+            {
+              batchOrders: JSON.stringify(lot),
             }
-          }
+          );
 
-          if (lot.length > 1) {
-            try {
-              const { data } = await this.unlimitedXHR.post(
-                ENDPOINTS.BATCH_ORDERS,
-                {
-                  batchOrders: JSON.stringify(lot),
-                }
-              );
-
-              data?.forEach?.((o: any) => {
-                if (o.code) {
-                  this.emitter.emit("error", o.msg);
-                } else {
-                  orderIds.push(o.clientOrderId);
-                }
-              });
-            } catch (err: any) {
-              this.emitter.emit(
-                "error",
-                err?.response?.data?.msg || err?.message
-              );
+          data?.forEach?.((o: any) => {
+            if (o.code) {
+              this.emitter.emit("error", o.msg);
+            } else {
+              orderIds.push(o.clientOrderId);
             }
-          }
-        })
-      )
-    );
+          });
+        } catch (err: any) {
+          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+        }
+      }
+    }
 
-    await Promise.all(promises);
+    return orderIds;
+  };
+
+  private placeOrderBatchFastest = async (payloads: any[]) => {
+    const lots = chunk(payloads, 5);
+    const orderIds = [] as string[];
+
+    for (const lot of lots) {
+      if (lot.length === 1) {
+        try {
+          await this.interceptedXHR.post(ENDPOINTS.ORDER, lot[0]);
+          orderIds.push(lot[0].newClientOrderId);
+        } catch (err: any) {
+          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+        }
+      }
+
+      if (lot.length > 1) {
+        try {
+          const { data } = await this.interceptedXHR.post(
+            ENDPOINTS.BATCH_ORDERS,
+            {
+              batchOrders: JSON.stringify(lot),
+            }
+          );
+
+          data?.forEach?.((o: any) => {
+            if (o.code) {
+              this.emitter.emit("error", o.msg);
+            } else {
+              orderIds.push(o.clientOrderId);
+            }
+          });
+        } catch (err: any) {
+          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+        }
+      }
+    }
 
     return orderIds;
   };
