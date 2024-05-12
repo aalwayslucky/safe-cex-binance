@@ -21,7 +21,16 @@ export class TokenBucket {
 
     return false;
   }
-
+  waitForTokens(): Promise<void> {
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (this.tokens10s >= 5 && this.tokens60s >= 5) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
   private addToken(): void {
     if (this.tokens10s < this.capacity10s) {
       this.tokens10s = Math.min(this.tokens10s + 29, this.capacity10s);
