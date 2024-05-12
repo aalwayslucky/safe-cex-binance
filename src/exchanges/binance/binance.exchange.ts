@@ -790,7 +790,7 @@ export class BinanceExchange extends BaseExchange {
 
   private placeOrderBatchFast = async (payloads: any[]) => {
     const lots = chunk(payloads, 5);
-    const orderIds = [];
+    const orderPromises = [];
 
     for (const lot of lots) {
       // Implement rate limiting for batch orders
@@ -804,11 +804,12 @@ export class BinanceExchange extends BaseExchange {
         });
       }
 
-      try {
-        if (lot.length === 1) {
-          await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
-          orderIds.push(lot[0].newClientOrderId);
-        } else {
+      const orderPromise = (async () => {
+        try {
+          if (lot.length === 1) {
+            await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
+            return [lot[0].newClientOrderId];
+          }
           const { data } = await this.unlimitedXHR.post(
             ENDPOINTS.BATCH_ORDERS,
             {
@@ -816,19 +817,25 @@ export class BinanceExchange extends BaseExchange {
             }
           );
 
-          data?.forEach?.((o: any) => {
-            if (o.code) {
-              this.emitter.emit('error', o.msg);
-            } else {
-              orderIds.push(o.clientOrderId);
-            }
-          });
+          return data
+            ?.map?.((o: any) => {
+              if (o.code) {
+                this.emitter.emit('error', o.msg);
+                return null;
+              }
+              return o.clientOrderId;
+            })
+            .filter(Boolean);
+        } catch (err: any) {
+          this.emitter.emit('error', err?.response?.data?.msg || err?.message);
+          return [];
         }
-      } catch (err: any) {
-        this.emitter.emit('error', err?.response?.data?.msg || err?.message);
-      }
+      })();
+
+      orderPromises.push(orderPromise);
     }
 
+    const orderIds = (await Promise.all(orderPromises)).flat();
     return orderIds;
   };
 }
