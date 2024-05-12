@@ -822,7 +822,7 @@ export class BinanceExchange extends BaseExchange {
     const lots = chunk(payloads, 5);
     const orderIds = [] as string[];
 
-    for (const lot of lots) {
+    const promises = lots.map(async (lot) => {
       if (lot.length === 1) {
         try {
           await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
@@ -852,7 +852,9 @@ export class BinanceExchange extends BaseExchange {
           this.emitter.emit("error", err?.response?.data?.msg || err?.message);
         }
       }
-    }
+    });
+
+    await Promise.all(promises);
 
     return orderIds;
   };
