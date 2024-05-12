@@ -107,7 +107,7 @@ class OrderQueueManager {
           }
           return this.unlimitedXHR
             .post(ENDPOINTS.BATCH_ORDERS, {
-              batchOrders: JSON.stringify(order),
+              batchOrders: JSON.stringify([order]),
             })
             .then((response: any) => {
               if (response.data?.code) {
