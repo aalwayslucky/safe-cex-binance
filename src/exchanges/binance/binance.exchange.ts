@@ -36,6 +36,7 @@ import { adjust, subtract } from '../../utils/safe-math';
 import { uuid } from '../../utils/uuid';
 import { BaseExchange } from '../base';
 
+// import type OrderQueueManager from './OrderQueueManager';
 import { createAPI } from './binance.api';
 import { TokenBucket } from './binance.ratelimit';
 import {
@@ -47,6 +48,7 @@ import {
 } from './binance.types';
 import { BinancePrivateWebsocket } from './binance.ws-private';
 import { BinancePublicWebsocket } from './binance.ws-public';
+import OrderQueueManager from './orderQueueManager';
 
 export class BinanceExchange extends BaseExchange {
   name = 'BINANCE';
@@ -59,9 +61,12 @@ export class BinanceExchange extends BaseExchange {
   publicWebsocket: BinancePublicWebsocket;
   privateWebsocket: BinancePrivateWebsocket;
   tokenBucket: TokenBucket; // Add tokenBucket property
+  // private orderQueueManager: OrderQueueManager;
+  private orderQueueManager: OrderQueueManager;
 
   constructor(opts: ExchangeOptions, store: Store) {
     super(opts, store);
+    this.unlimitedXHR = createAPI(opts);
 
     this.xhr = rateLimit(createAPI(opts), { maxRPS: 3 });
     this.xhrBatchOrders = rateLimit(createAPI(opts), {
@@ -69,8 +74,10 @@ export class BinanceExchange extends BaseExchange {
       perMilliseconds: 10000,
     });
     this.tokenBucket = new TokenBucket(opts.rateLimit);
-
-    this.unlimitedXHR = createAPI(opts);
+    this.orderQueueManager = new OrderQueueManager(
+      this.unlimitedXHR,
+      this.emitter
+    );
 
     this.publicWebsocket = new BinancePublicWebsocket(this);
     this.privateWebsocket = new BinancePrivateWebsocket(this);
@@ -590,7 +597,19 @@ export class BinanceExchange extends BaseExchange {
 
   placeOrdersFast = async (orders: PlaceOrderOpts[]) => {
     const requests = orders.flatMap((o) => this.formatCreateOrder(o));
-    return await this.placeOrderBatchFast(requests);
+
+    // Enqueue each request in the OrderQueueManager
+    for (const request of requests) {
+      await this.orderQueueManager.enqueueOrder(request);
+    }
+
+    // Wait for the OrderQueueManager to finish processing
+    while (this.orderQueueManager.isProcessing()) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Return the results
+    return this.orderQueueManager.getResults();
   };
 
   // eslint-disable-next-line complexity
@@ -785,55 +804,6 @@ export class BinanceExchange extends BaseExchange {
       }
     }
 
-    return orderIds;
-  };
-
-  private placeOrderBatchFast = async (payloads: any[]) => {
-    const lots = chunk(payloads, 5);
-    const orderPromises = [];
-
-    for (const lot of lots) {
-      if (lot.length === 1) {
-        try {
-          const orderPromise = this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
-          orderPromises.push(orderPromise.then(() => lot[0].newClientOrderId));
-        } catch (err: any) {
-          this.emitter.emit('error', err?.response?.data?.msg || err?.message);
-        }
-      }
-
-      if (lot.length > 1) {
-        // Implement rate limiting for batch orders
-        while (!this.tokenBucket.take()) {
-          this.emitter.emit('error', 'Rate limit exceeded, waiting...');
-          await this.tokenBucket.waitForTokens(); // Wait until tokens are available
-        }
-
-        try {
-          const orderPromise = this.unlimitedXHR.post(ENDPOINTS.BATCH_ORDERS, {
-            batchOrders: JSON.stringify(lot),
-          });
-
-          orderPromises.push(
-            orderPromise.then(({ data }) =>
-              data
-                ?.map?.((o: any) => {
-                  if (o.code) {
-                    this.emitter.emit('error', o.msg);
-                    return null;
-                  }
-                  return o.clientOrderId;
-                })
-                .filter(Boolean)
-            )
-          );
-        } catch (err: any) {
-          this.emitter.emit('error', err?.response?.data?.msg || err?.message);
-        }
-      }
-    }
-
-    const orderIds = (await Promise.all(orderPromises)).flat();
     return orderIds;
   };
 }

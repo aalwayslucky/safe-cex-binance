@@ -19,9 +19,20 @@
     "experimentalDecorators": true,
     "sourceMap": true,
     "outDir": "dist",
-    "types": ["node"],
-    "lib": ["ES6", "DOM", "DOM.Iterable"]
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ES6",
+      "DOM",
+      "DOM.Iterable"
+    ]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
