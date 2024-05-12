@@ -6,7 +6,6 @@ class OrderQueueManager {
   private queue: any[] = [];
   private mutex = new Mutex();
   private readonly maxBatchSize = 5;
-  private readonly endpoint = ENDPOINTS.BATCH_ORDERS;
   private ordersPer10s = 300;
   private ordersPer60s = 1200;
   private lastResetTime = Date.now();
@@ -94,11 +93,30 @@ class OrderQueueManager {
 
       // Send the batch orders to the API
       try {
-        const promises = batch.map((order) =>
-          this.unlimitedXHR.post(this.endpoint, {
-            batchOrders: JSON.stringify(order),
-          })
-        );
+        const promises = batch.map((order) => {
+          if (order.length === 1) {
+            return this.unlimitedXHR
+              .post(ENDPOINTS.ORDER, order[0])
+              .then((response: any) => {
+                if (response.data?.code) {
+                  this.emitter.emit('error', response.data.msg);
+                  return null;
+                }
+                return response.data.clientOrderId;
+              });
+          }
+          return this.unlimitedXHR
+            .post(ENDPOINTS.BATCH_ORDERS, {
+              batchOrders: JSON.stringify(order),
+            })
+            .then((response: any) => {
+              if (response.data?.code) {
+                this.emitter.emit('error', response.data.msg);
+                return null;
+              }
+              return response.data.clientOrderId;
+            });
+        });
 
         const results = await Promise.allSettled(promises);
 
@@ -107,14 +125,7 @@ class OrderQueueManager {
             (result): result is PromiseFulfilledResult<any> =>
               result.status === 'fulfilled'
           )
-          .map((result) => {
-            const { value } = result;
-            if (value.data?.code) {
-              this.emitter.emit('error', value.data.msg);
-              return null;
-            }
-            return value.data.clientOrderId;
-          })
+          .map(({ value }) => value)
           .filter(Boolean);
 
         this.results.push(...clientOrderIds);
