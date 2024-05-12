@@ -598,10 +598,8 @@ export class BinanceExchange extends BaseExchange {
   placeOrdersFast = async (orders: PlaceOrderOpts[]) => {
     const requests = orders.flatMap((o) => this.formatCreateOrder(o));
 
-    // Enqueue each request in the OrderQueueManager
-    for (const request of requests) {
-      await this.orderQueueManager.enqueueOrder(request);
-    }
+    // Enqueue all requests in the OrderQueueManager
+    await this.orderQueueManager.enqueueOrders(requests);
 
     // Wait for the OrderQueueManager to finish processing
     while (this.orderQueueManager.isProcessing()) {

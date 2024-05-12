@@ -32,7 +32,11 @@ class OrderQueueManager {
       release();
     }
   }
-
+  enqueueOrders = async (orders: any[]) => {
+    for (const order of orders) {
+      await this.enqueueOrder(order);
+    }
+  };
   isProcessing() {
     return this.processing;
   }
