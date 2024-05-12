@@ -805,10 +805,7 @@ export class BinanceExchange extends BaseExchange {
       if (lot.length > 1) {
         // Implement rate limiting for batch orders
         while (!this.tokenBucket.take()) {
-          this.emitter.emit(
-            'rateLimitExceeded',
-            'Rate limit exceeded, waiting...'
-          );
+          this.emitter.emit('error', 'Rate limit exceeded, waiting...');
           await new Promise((resolve) => {
             setTimeout(resolve, 1000); // Wait for 1 second
           });
