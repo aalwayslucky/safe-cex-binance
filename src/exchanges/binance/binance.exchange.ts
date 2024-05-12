@@ -1,4 +1,4 @@
-import type { Axios, AxiosInstance } from "axios";
+import type { Axios } from "axios";
 import rateLimit from "axios-rate-limit";
 import type { ManipulateType } from "dayjs";
 import dayjs from "dayjs";
