@@ -829,15 +829,15 @@ export class BinanceExchange extends BaseExchange {
       const timeSinceLastRequest = (now - lastRequestTime) / 1000; // seconds
       lastRequestTime = now;
 
-      if (requestCount >= 60 && timeSinceLastRequest < 10) {
+      if (requestCount >= 55 && timeSinceLastRequest < 11) {
         // 300 orders / 5 orders per request = 60 requests
-        const waitTime = 10 - timeSinceLastRequest; // seconds
+        const waitTime = 10; // seconds
         await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
       }
 
       if (requestCount >= 240 && timeSinceLastRequest < 60) {
         // 1200 orders / 5 orders per request = 240 requests
-        const waitTime = 60 - timeSinceLastRequest; // seconds
+        const waitTime = 60;
         await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
       }
 
