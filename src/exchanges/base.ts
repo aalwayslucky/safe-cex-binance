@@ -1,12 +1,12 @@
-import uniq from "lodash/uniq";
-import { forEachSeries, mapSeries } from "p-iteration";
-import Emitter from "tiny-emitter";
+import uniq from 'lodash/uniq';
+import { forEachSeries, mapSeries } from 'p-iteration';
+import Emitter from 'tiny-emitter';
 
 import type {
   DatafeedConfiguration,
   IBasicDataFeed,
-} from "../charting_library";
-import type { Store } from "../store/store.interface";
+} from '../charting_library';
+import type { Store } from '../store/store.interface';
 import type {
   Candle,
   ExchangeAccount,
@@ -16,10 +16,10 @@ import type {
   OrderBook,
   PlaceOrderOpts,
   UpdateOrderOpts,
-} from "../types";
-import { LogSeverity, OrderSide, OrderType } from "../types";
-import { createDatafeedAPI } from "../utils/datafeed-api";
-import { sleep } from "../utils/sleep";
+} from '../types';
+import { LogSeverity, OrderSide, OrderType } from '../types';
+import { createDatafeedAPI } from '../utils/datafeed-api';
+import { sleep } from '../utils/sleep';
 
 export interface Exchange {
   name: string;
@@ -27,9 +27,9 @@ export interface Exchange {
   emitter: Emitter.TinyEmitter;
   options: ExchangeOptions;
   isDisposed: boolean;
-  on: Emitter.TinyEmitter["on"];
-  once: Emitter.TinyEmitter["once"];
-  off: Emitter.TinyEmitter["off"];
+  on: Emitter.TinyEmitter['on'];
+  once: Emitter.TinyEmitter['once'];
+  off: Emitter.TinyEmitter['off'];
   dispose: () => void;
   getAccount: () => Promise<ExchangeAccount>;
   validateAccount: () => Promise<string>;
@@ -62,12 +62,12 @@ export class BaseExchange implements Exchange {
   isDisposed: boolean = false;
   isNuking: boolean = false;
 
-  on: Emitter.TinyEmitter["on"];
-  once: Emitter.TinyEmitter["once"];
-  off: Emitter.TinyEmitter["off"];
+  on: Emitter.TinyEmitter['on'];
+  once: Emitter.TinyEmitter['once'];
+  off: Emitter.TinyEmitter['off'];
 
   constructor(opts: ExchangeOptions, store: Store) {
-    this.name = "SAFE-CEX";
+    this.name = 'SAFE-CEX';
 
     this.options = opts;
     this.store = store;
@@ -77,37 +77,37 @@ export class BaseExchange implements Exchange {
     this.off = this.emitter.off.bind(this.emitter);
 
     this.store.subscribe((data) => {
-      this.emitter.emit("update", data);
+      this.emitter.emit('update', data);
     });
   }
 
   onWSPublicClose = () => {};
 
   getAccount = async () => {
-    await Promise.reject(new Error("Not implemented"));
+    await Promise.reject(new Error('Not implemented'));
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     return {} as ExchangeAccount;
   };
 
   validateAccount = async () => {
-    await Promise.reject(new Error("Not implemented"));
-    return "";
+    await Promise.reject(new Error('Not implemented'));
+    return '';
   };
 
   log = (message: string, severity: LogSeverity = LogSeverity.Info) => {
-    this.emitter.emit("log", message, severity);
+    this.emitter.emit('log', message, severity);
   };
 
   start = async () => {
-    await Promise.reject(new Error("Not implemented"));
+    await Promise.reject(new Error('Not implemented'));
   };
 
   setLeverage = async (_symbol: string, _leverage: number) => {
-    await Promise.reject(new Error("Not implemented"));
+    await Promise.reject(new Error('Not implemented'));
   };
 
   changePositionMode = async (_hedged: boolean) => {
-    await Promise.reject(new Error("Not implemented"));
+    await Promise.reject(new Error('Not implemented'));
   };
 
   setAllLeverage = async (inputLeverage: number) => {
@@ -119,7 +119,7 @@ export class BaseExchange implements Exchange {
   };
 
   placeOrder = async (_opts: PlaceOrderOpts) => {
-    await Promise.reject(new Error("Not implemented"));
+    await Promise.reject(new Error('Not implemented'));
     return [] as string[];
   };
 
@@ -133,16 +133,16 @@ export class BaseExchange implements Exchange {
   };
 
   updateOrder = async (_opts: UpdateOrderOpts) => {
-    await Promise.reject(new Error("Not implemented"));
+    await Promise.reject(new Error('Not implemented'));
     return [] as string[];
   };
 
   cancelOrders = async (_orders: Order[]) => {
-    await Promise.reject(new Error("Not implemented"));
+    await Promise.reject(new Error('Not implemented'));
   };
 
   cancelSymbolOrders = async (_symbol: string) => {
-    await Promise.reject(new Error("Not implemented"));
+    await Promise.reject(new Error('Not implemented'));
   };
 
   cancelAllOrders = async () => {
@@ -210,7 +210,7 @@ export class BaseExchange implements Exchange {
       await forEachSeries(openPositions, async (position) => {
         await this.placeOrder({
           symbol: position.symbol,
-          side: position.side === "long" ? OrderSide.Sell : OrderSide.Buy,
+          side: position.side === 'long' ? OrderSide.Sell : OrderSide.Buy,
           type: OrderType.Market,
           amount: position.contracts,
           reduceOnly: true,
@@ -239,9 +239,9 @@ export class BaseExchange implements Exchange {
   dispose() {
     this.isDisposed = true;
 
-    this.off("update");
-    this.off("fill");
-    this.off("error");
+    this.off('update');
+    this.off('fill');
+    this.off('error');
 
     this.store.reset();
   }
