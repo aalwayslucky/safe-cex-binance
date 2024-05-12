@@ -100,21 +100,36 @@ class OrderQueueManager {
           })
         );
 
-        const results = await Promise.all(promises);
+        const results = await Promise.allSettled(promises);
 
         const clientOrderIds = results
-          .map(({ data }) => {
-            if (data?.code) {
-              this.emitter.emit('error', data.msg);
+          .filter(
+            (result): result is PromiseFulfilledResult<any> =>
+              result.status === 'fulfilled'
+          )
+          .map((result) => {
+            const { value } = result;
+            if (value.data?.code) {
+              this.emitter.emit('error', value.data.msg);
               return null;
             }
-            return data.clientOrderId;
+            return value.data.clientOrderId;
           })
           .filter(Boolean);
 
         this.results.push(...clientOrderIds);
+
+        // Handle rejected promises
+        results
+          .filter(
+            (result): result is PromiseRejectedResult =>
+              result.status === 'rejected'
+          )
+          .forEach(({ reason }) => {
+            this.emitter.emit('error', 'Failed to submit batch:', reason);
+          });
       } catch (error) {
-        this.emitter.emit('error', 'Failed to submit batch:', error);
+        this.emitter.emit('error', 'An unexpected error occurred:', error);
       }
       // Adjust sleeping time based on the remaining rate limit
       if (this.ordersPer10s <= 0 || this.ordersPer60s <= 0) {
