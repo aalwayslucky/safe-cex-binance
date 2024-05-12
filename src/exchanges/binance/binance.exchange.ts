@@ -63,8 +63,8 @@ export class BinanceExchange extends BaseExchange {
 
     this.xhr = rateLimit(createAPI(opts), { maxRPS: 3 });
     this.xhrBatchOrders = rateLimit(createAPI(opts), {
-      maxRequests: 60,
-      perMilliseconds: 1200,
+      maxRequests: 39,
+      perMilliseconds: 10000,
     });
 
     this.unlimitedXHR = createAPI(opts);
@@ -72,35 +72,7 @@ export class BinanceExchange extends BaseExchange {
     this.publicWebsocket = new BinancePublicWebsocket(this);
     this.privateWebsocket = new BinancePrivateWebsocket(this);
   }
-  checkRateLimit = async () => {
-    const currentTime = Date.now();
-    if (
-      this.requestCounter >= 300 &&
-      currentTime - this.lastRequestTime < 10000
-    ) {
-      // If reached limit, wait for 10 seconds
-      const delay = 10000 - (currentTime - this.lastRequestTime);
-      await this.sleep(delay);
-      // Reset counters after delay
-      this.requestCounter = 0;
-      this.lastRequestTime = currentTime;
-    } else {
-      // Increment counter
-      this.requestCounter++;
-      if (currentTime - this.lastRequestTime >= 60000) {
-        // If more than a minute has passed, reset counters
-        this.requestCounter = 1;
-        this.lastRequestTime = currentTime;
-      }
-    }
-  };
 
-  // Sleep function
-  sleep = (delay: number) => {
-    return new Promise((resolve) => {
-      setTimeout(resolve, delay);
-    });
-  };
   dispose = () => {
     super.dispose();
     this.publicWebsocket.dispose();
