@@ -139,9 +139,11 @@ class OrderQueueManager {
         await sleep(waitTime);
       } else {
         // Distribute the remaining orders evenly over the remaining time
+        // Distribute the remaining orders evenly over the remaining time
         const remainingTime = 10000 - (timeElapsed % 10000);
+        const remainingLots = Math.floor(this.ordersPer10s / 5);
         const sleepTime =
-          this.ordersPer10s > 0 ? remainingTime / this.ordersPer10s : 1000;
+          remainingLots > 0 ? remainingTime / remainingLots : 1000;
         const debugData = {
           sleepTime,
           remainingOrders10s: this.ordersPer10s,
