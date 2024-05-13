@@ -82,17 +82,26 @@ class OrderQueueManager {
         this.ordersPer60s, // orders per 60 seconds
         this.queue.length
       );
-      this.emitter.emit(
-        'info',
-        'Processing batch of',
+      const debugDataInfo = {
         maxAllowedSize,
-        'orders'
-      );
+        remainingOrders10s: this.ordersPer10s,
+        remainingOrders60s: this.ordersPer60s,
+        queueLength: this.queue.length,
+      };
+      const debugDataString = `Max allowed size: ${debugDataInfo.maxAllowedSize}, Remaining orders in 10s window: ${debugDataInfo.remainingOrders10s}, Remaining orders in 60s window: ${debugDataInfo.remainingOrders60s}, Queue length: ${debugDataInfo.queueLength}`;
+      this.emitter.emit('erro', debugDataString);
 
       const release = await this.mutex.acquire();
       const batch = this.queue.splice(0, maxAllowedSize);
       release();
-
+      const debugDataq = {
+        batchLength: batch.length,
+        remainingOrders10s: this.ordersPer10s,
+        remainingOrders60s: this.ordersPer60s,
+        queueLength: this.queue.length,
+      };
+      const debugStringS = `Batch length: ${debugDataq.batchLength}, Remaining orders in 10s window: ${debugDataq.remainingOrders10s}, Remaining orders in 60s window: ${debugDataq.remainingOrders60s}, Queue length: ${debugDataq.queueLength}`;
+      this.emitter.emit('error', debugStringS);
       // Update remaining limits
       this.ordersPer10s -= batch.length;
       this.ordersPer60s -= batch.length;
