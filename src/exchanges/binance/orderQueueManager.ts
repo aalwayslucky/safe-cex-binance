@@ -37,7 +37,13 @@ class OrderQueueManager {
   getResults() {
     return this.results;
   }
-
+  startEmittingQueueLength = () => {
+    setInterval(() => {
+      if (this.queue.length > 0) {
+        this.emitter.emit('error', this.queue.length);
+      }
+    }, 1000);
+  };
   private async startProcessing() {
     try {
       while (this.queue.length > 0) {
