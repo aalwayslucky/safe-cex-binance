@@ -36,7 +36,9 @@ class OrderQueueManager {
   }
 
   getResults() {
-    return this.results;
+    const resultsCopy = [...this.results];
+    this.results = [];
+    return resultsCopy;
   }
   startEmittingQueueLength = () => {
     setInterval(() => {
