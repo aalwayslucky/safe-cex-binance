@@ -109,11 +109,14 @@ class OrderQueueManager {
       );
 
       // Adjust sleeping time based on the remaining rate limit
-      if (this.ordersPer10s <= 0 || this.ordersPer60s <= 0) {
-        const waitTime = Math.max(
-          10000 - (timeElapsed % 10000),
-          60000 - (timeElapsed % 60000)
-        );
+      let waitTime;
+      if (this.ordersPer10s <= 0) {
+        waitTime = 10000 - (timeElapsed % 10000);
+      } else if (this.ordersPer60s <= 0) {
+        waitTime = 60000 - (timeElapsed % 60000);
+      }
+
+      if (waitTime) {
         const debugData = {
           waitTime,
           remainingOrders10s: this.ordersPer10s,
@@ -123,11 +126,7 @@ class OrderQueueManager {
 
         const debugString = `waitTime : ${debugData.waitTime} ms, Remaining orders in 10s window: ${debugData.remainingOrders10s}, Remaining orders in 60s window: ${debugData.remainingOrders60s}, Queue length: ${debugData.queueLength}`;
 
-        this.emitter.emit(
-          'error',
-
-          debugString
-        );
+        this.emitter.emit('error', debugString);
         await sleep(waitTime);
       } else {
         // Distribute the remaining orders evenly over the remaining time
@@ -143,12 +142,7 @@ class OrderQueueManager {
 
         const debugString = `Sleep time: ${debugData.sleepTime} ms, Remaining orders in 10s window: ${debugData.remainingOrders10s}, Remaining orders in 60s window: ${debugData.remainingOrders60s}, Queue length: ${debugData.queueLength}`;
 
-        this.emitter.emit(
-          'error',
-
-          debugString
-        );
-
+        this.emitter.emit('error', debugString);
         await sleep(sleepTime);
       }
     }
