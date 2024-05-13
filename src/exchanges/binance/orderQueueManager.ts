@@ -5,7 +5,7 @@ class OrderQueueManager {
 
   private queue: any[] = [];
   private mutex = new Mutex();
-  private ordersPer10s = 300;
+  private ordersPer10s = 290;
   private ordersPer60s = 1200;
   private lastResetTime = Date.now();
   private processing = false;
@@ -68,7 +68,7 @@ class OrderQueueManager {
       // Reset rate limits based on time
       if (timeElapsed >= 10000) {
         // every 10 seconds
-        this.ordersPer10s = 300;
+        this.ordersPer10s = 290;
       }
       if (timeElapsed >= 60000) {
         // every 60 seconds
@@ -114,12 +114,34 @@ class OrderQueueManager {
           10000 - (timeElapsed % 10000),
           60000 - (timeElapsed % 60000)
         );
+        this.emitter.emit(
+          'info',
+          'Waiting for',
+          waitTime,
+          'ms. Remaining orders in 10s window:',
+          this.ordersPer10s,
+          '. Remaining orders in 60s window:',
+          this.ordersPer60s,
+          '. Queue length:',
+          this.queue.length
+        );
         await sleep(waitTime);
       } else {
         // Distribute the remaining orders evenly over the remaining time
         const remainingTime = 10000 - (timeElapsed % 10000);
         const sleepTime =
           this.ordersPer10s > 0 ? remainingTime / this.ordersPer10s : 1000;
+        this.emitter.emit(
+          'info',
+          'Waiting for',
+          sleepTime,
+          'ms. Remaining orders in 10s window:',
+          this.ordersPer10s,
+          '. Remaining orders in 60s window:',
+          this.ordersPer60s,
+          '. Queue length:',
+          this.queue.length
+        );
         await sleep(sleepTime);
       }
     }
