@@ -114,16 +114,19 @@ class OrderQueueManager {
           10000 - (timeElapsed % 10000),
           60000 - (timeElapsed % 60000)
         );
+        const debugData = {
+          waitTime,
+          remainingOrders10s: this.ordersPer10s,
+          remainingOrders60s: this.ordersPer60s,
+          queueLength: this.queue.length,
+        };
+
+        const debugString = `waitTime : ${debugData.waitTime} ms, Remaining orders in 10s window: ${debugData.remainingOrders10s}, Remaining orders in 60s window: ${debugData.remainingOrders60s}, Queue length: ${debugData.queueLength}`;
+
         this.emitter.emit(
           'error',
-          'Waiting for',
-          waitTime,
-          'ms. Remaining orders in 10s window:',
-          this.ordersPer10s,
-          '. Remaining orders in 60s window:',
-          this.ordersPer60s,
-          '. Queue length:',
-          this.queue.length
+
+          debugString
         );
         await sleep(waitTime);
       } else {
@@ -131,17 +134,21 @@ class OrderQueueManager {
         const remainingTime = 10000 - (timeElapsed % 10000);
         const sleepTime =
           this.ordersPer10s > 0 ? remainingTime / this.ordersPer10s : 1000;
+        const debugData = {
+          sleepTime,
+          remainingOrders10s: this.ordersPer10s,
+          remainingOrders60s: this.ordersPer60s,
+          queueLength: this.queue.length,
+        };
+
+        const debugString = `Sleep time: ${debugData.sleepTime} ms, Remaining orders in 10s window: ${debugData.remainingOrders10s}, Remaining orders in 60s window: ${debugData.remainingOrders60s}, Queue length: ${debugData.queueLength}`;
+
         this.emitter.emit(
           'error',
-          'Waiting for',
-          sleepTime,
-          'ms. Remaining orders in 10s window:',
-          this.ordersPer10s,
-          '. Remaining orders in 60s window:',
-          this.ordersPer60s,
-          '. Queue length:',
-          this.queue.length
+
+          debugString
         );
+
         await sleep(sleepTime);
       }
     }
