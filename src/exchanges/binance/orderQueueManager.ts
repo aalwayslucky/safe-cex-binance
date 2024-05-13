@@ -5,7 +5,6 @@ class OrderQueueManager {
 
   private queue: any[] = [];
   private mutex = new Mutex();
-  private readonly maxBatchSize = 5;
   private ordersPer10s = 300;
   private ordersPer60s = 1200;
   private lastResetTime = Date.now();
@@ -79,9 +78,8 @@ class OrderQueueManager {
 
       // Calculate the maximum batch size allowed by the rate limits
       const maxAllowedSize = Math.min(
-        this.maxBatchSize,
-        this.ordersPer10s,
-        this.ordersPer60s,
+        this.ordersPer10s, // orders per 10 seconds
+        this.ordersPer60s, // orders per 60 seconds
         this.queue.length
       );
 
