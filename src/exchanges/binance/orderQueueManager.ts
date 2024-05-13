@@ -18,19 +18,13 @@ class OrderQueueManager {
     this.placeOrderBatchFast = placeOrderBatchFast;
   }
 
-  enqueueOrder(order: any) {
-    this.queue.push(order);
-    if (!this.processing) {
-      this.processing = true;
-      this.startProcessing();
-    }
-  }
-
   enqueueOrders = async (orders: any[]) => {
     const release = await this.mutex.acquire();
     try {
-      for (const order of orders) {
-        this.enqueueOrder(order);
+      this.queue.push(...orders);
+      if (!this.processing) {
+        this.processing = true;
+        this.startProcessing();
       }
     } finally {
       release();
