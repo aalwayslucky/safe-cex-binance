@@ -806,55 +806,42 @@ export class BinanceExchange extends BaseExchange {
   };
   private placeOrderBatchFast = async (payloads: any[]) => {
     const lots = chunk(payloads, 5);
-    const orderPromises = [];
+    const orderIds = [] as string[];
 
-    for (const lot of lots) {
+    const promises = lots.map(async (lot) => {
       if (lot.length === 1) {
         try {
-          const orderPromise = this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
-          orderPromises.push(orderPromise.then(() => lot[0].newClientOrderId));
+          await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
+          orderIds.push(lot[0].newClientOrderId);
         } catch (err: any) {
           this.emitter.emit('error', err?.response?.data?.msg || err?.message);
         }
       }
 
       if (lot.length > 1) {
-        // Implement rate limiting for batch orders
-        while (!this.tokenBucket.take()) {
-          this.emitter.emit(
-            'rateLimitExceeded',
-            'Rate limit exceeded, waiting...'
-          );
-          await new Promise((resolve) => {
-            setTimeout(resolve, 1000); // Wait for 1 second
-          });
-        }
-
         try {
-          const orderPromise = this.unlimitedXHR.post(ENDPOINTS.BATCH_ORDERS, {
-            batchOrders: JSON.stringify(lot),
-          });
-
-          orderPromises.push(
-            orderPromise.then(({ data }) =>
-              data
-                ?.map?.((o: any) => {
-                  if (o.code) {
-                    this.emitter.emit('error', o.msg);
-                    return null;
-                  }
-                  return o.clientOrderId;
-                })
-                .filter(Boolean)
-            )
+          const { data } = await this.unlimitedXHR.post(
+            ENDPOINTS.BATCH_ORDERS,
+            {
+              batchOrders: JSON.stringify(lot),
+            }
           );
+
+          data?.forEach?.((o: any) => {
+            if (o.code) {
+              this.emitter.emit('error', o.msg);
+            } else {
+              orderIds.push(o.clientOrderId);
+            }
+          });
         } catch (err: any) {
           this.emitter.emit('error', err?.response?.data?.msg || err?.message);
         }
       }
-    }
+    });
 
-    const orderIds = (await Promise.all(orderPromises)).flat();
+    await Promise.all(promises);
+
     return orderIds;
   };
 }

@@ -60,6 +60,8 @@ class OrderQueueManager {
     const sleep = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
 
+    const promises = []; // Array to hold all the promises
+
     while (this.queue.length > 0) {
       const now = Date.now();
       const timeElapsed = now - this.lastResetTime;
@@ -92,12 +94,15 @@ class OrderQueueManager {
       this.ordersPer60s -= batch.length;
 
       // Send the batch orders to the API
-      try {
-        const orderIds = await this.placeOrderBatchFast(batch);
-        this.results.push(...orderIds);
-      } catch (error) {
-        this.emitter.emit('error', 'An unexpected error occurred:', error);
-      }
+      promises.push(
+        this.placeOrderBatchFast(batch)
+          .then((orderIds) => {
+            this.results.push(...orderIds);
+          })
+          .catch((error) => {
+            this.emitter.emit('error', 'An unexpected error occurred:', error);
+          })
+      );
 
       // Adjust sleeping time based on the remaining rate limit
       if (this.ordersPer10s <= 0 || this.ordersPer60s <= 0) {
@@ -110,6 +115,9 @@ class OrderQueueManager {
         await sleep(1000); // Short sleep to prevent high CPU usage
       }
     }
+
+    // Wait for all the promises to resolve
+    await Promise.all(promises);
   }
 }
 
