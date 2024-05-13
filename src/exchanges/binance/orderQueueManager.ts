@@ -22,6 +22,7 @@ class OrderQueueManager {
     const release = await this.mutex.acquire();
     try {
       this.queue.push(...orders);
+      this.emitter.emit('orderManager', this.queue.length); // Emit event after enqueue
       if (!this.processing) {
         this.processing = true;
         this.startProcessing();
@@ -83,26 +84,13 @@ class OrderQueueManager {
         this.ordersPer60s, // orders per 60 seconds
         this.queue.length
       );
-      const debugDataInfo = {
-        maxAllowedSize,
-        remainingOrders10s: this.ordersPer10s,
-        remainingOrders60s: this.ordersPer60s,
-        queueLength: this.queue.length,
-      };
-      const debugDataString = `Max allowed size: ${debugDataInfo.maxAllowedSize}, Remaining orders in 10s window: ${debugDataInfo.remainingOrders10s}, Remaining orders in 60s window: ${debugDataInfo.remainingOrders60s}, Queue length: ${debugDataInfo.queueLength}`;
-      this.emitter.emit('erro', debugDataString);
 
       const release = await this.mutex.acquire();
+
       const batch = this.queue.splice(0, maxAllowedSize);
       release();
-      const debugDataq = {
-        batchLength: batch.length,
-        remainingOrders10s: this.ordersPer10s,
-        remainingOrders60s: this.ordersPer60s,
-        queueLength: this.queue.length,
-      };
-      const debugStringS = `Batch length: ${debugDataq.batchLength}, Remaining orders in 10s window: ${debugDataq.remainingOrders10s}, Remaining orders in 60s window: ${debugDataq.remainingOrders60s}, Queue length: ${debugDataq.queueLength}`;
-      this.emitter.emit('error', debugStringS);
+      this.emitter.emit('orderManager', this.queue.length); // Emit event after splice
+
       // Update remaining limits
       this.ordersPer10s -= batch.length;
       this.ordersPer60s -= batch.length;
@@ -127,39 +115,17 @@ class OrderQueueManager {
       }
 
       if (waitTime) {
-        const debugData = {
-          waitTime,
-          remainingOrders10s: this.ordersPer10s,
-          remainingOrders60s: this.ordersPer60s,
-          queueLength: this.queue.length,
-        };
-
-        const debugString = `waitTime : ${debugData.waitTime} ms, Remaining orders in 10s window: ${debugData.remainingOrders10s}, Remaining orders in 60s window: ${debugData.remainingOrders60s}, Queue length: ${debugData.queueLength}`;
-
-        this.emitter.emit('error', debugString);
         await sleep(waitTime);
       } else {
-        // Distribute the remaining orders evenly over the remaining time
-        // Distribute the remaining orders evenly over the remaining time
         const remainingTime = 10000 - (timeElapsed % 10000);
         const remainingLots = Math.floor(this.ordersPer10s / 5);
         const sleepTime =
           remainingLots > 0 ? remainingTime / remainingLots : 1000;
-        const debugData = {
-          sleepTime,
-          remainingOrders10s: this.ordersPer10s,
-          remainingOrders60s: this.ordersPer60s,
-          queueLength: this.queue.length,
-        };
 
-        const debugString = `Sleep time: ${debugData.sleepTime} ms, Remaining orders in 10s window: ${debugData.remainingOrders10s}, Remaining orders in 60s window: ${debugData.remainingOrders60s}, Queue length: ${debugData.queueLength}`;
-
-        this.emitter.emit('error', debugString);
         await sleep(sleepTime);
       }
     }
 
-    // Wait for all the promises to resolve
     await Promise.all(promises);
   }
 }
