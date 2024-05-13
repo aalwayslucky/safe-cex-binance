@@ -115,7 +115,7 @@ class OrderQueueManager {
           60000 - (timeElapsed % 60000)
         );
         this.emitter.emit(
-          'info',
+          'error',
           'Waiting for',
           waitTime,
           'ms. Remaining orders in 10s window:',
@@ -132,7 +132,7 @@ class OrderQueueManager {
         const sleepTime =
           this.ordersPer10s > 0 ? remainingTime / this.ordersPer10s : 1000;
         this.emitter.emit(
-          'info',
+          'error',
           'Waiting for',
           sleepTime,
           'ms. Remaining orders in 10s window:',
