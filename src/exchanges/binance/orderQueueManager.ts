@@ -82,6 +82,12 @@ class OrderQueueManager {
         this.ordersPer60s, // orders per 60 seconds
         this.queue.length
       );
+      this.emitter.emit(
+        'info',
+        'Processing batch of',
+        maxAllowedSize,
+        'orders'
+      );
 
       const release = await this.mutex.acquire();
       const batch = this.queue.splice(0, maxAllowedSize);
@@ -110,7 +116,11 @@ class OrderQueueManager {
         );
         await sleep(waitTime);
       } else {
-        await sleep(1000); // Short sleep to prevent high CPU usage
+        // Distribute the remaining orders evenly over the remaining time
+        const remainingTime = 10000 - (timeElapsed % 10000);
+        const sleepTime =
+          this.ordersPer10s > 0 ? remainingTime / this.ordersPer10s : 1000;
+        await sleep(sleepTime);
       }
     }
 
