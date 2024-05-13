@@ -1,8 +1,8 @@
 import { Mutex } from 'async-mutex';
 
-import { ENDPOINTS } from './binance.types';
-
 class OrderQueueManager {
+  private placeOrderBatch: (payloads: any[]) => Promise<string[]>;
+
   private queue: any[] = [];
   private mutex = new Mutex();
   private readonly maxBatchSize = 5;
@@ -13,10 +13,10 @@ class OrderQueueManager {
   private results: string[] = [];
 
   constructor(
-    private unlimitedXHR: any,
-    private emitter: any
+    private emitter: any,
+    placeOrderBatch: (payloads: any[]) => Promise<string[]>
   ) {
-    // Empty constructor
+    this.placeOrderBatch = placeOrderBatch;
   }
 
   async enqueueOrder(order: any) {
@@ -93,55 +93,12 @@ class OrderQueueManager {
 
       // Send the batch orders to the API
       try {
-        const promises = batch.map((order) => {
-          if (order.length === 1) {
-            return this.unlimitedXHR
-              .post(ENDPOINTS.ORDER, order[0])
-              .then((response: any) => {
-                if (response.data?.code) {
-                  this.emitter.emit('error', response.data.msg);
-                  return null;
-                }
-                return response.data.clientOrderId;
-              });
-          }
-          return this.unlimitedXHR
-            .post(ENDPOINTS.BATCH_ORDERS, {
-              batchOrders: JSON.stringify([order]),
-            })
-            .then((response: any) => {
-              if (response.data?.code) {
-                this.emitter.emit('error', response.data.msg);
-                return null;
-              }
-              return response.data.clientOrderId;
-            });
-        });
-
-        const results = await Promise.allSettled(promises);
-
-        const clientOrderIds = results
-          .filter(
-            (result): result is PromiseFulfilledResult<any> =>
-              result.status === 'fulfilled'
-          )
-          .map(({ value }) => value)
-          .filter(Boolean);
-
-        this.results.push(...clientOrderIds);
-
-        // Handle rejected promises
-        results
-          .filter(
-            (result): result is PromiseRejectedResult =>
-              result.status === 'rejected'
-          )
-          .forEach(({ reason }) => {
-            this.emitter.emit('error', 'Failed to submit batch:', reason);
-          });
+        const orderIds = await this.placeOrderBatch(batch);
+        this.results.push(...orderIds);
       } catch (error) {
         this.emitter.emit('error', 'An unexpected error occurred:', error);
       }
+
       // Adjust sleeping time based on the remaining rate limit
       if (this.ordersPer10s <= 0 || this.ordersPer60s <= 0) {
         const waitTime = Math.max(

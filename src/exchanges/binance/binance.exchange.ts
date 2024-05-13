@@ -75,8 +75,8 @@ export class BinanceExchange extends BaseExchange {
     });
     this.tokenBucket = new TokenBucket(opts.rateLimit);
     this.orderQueueManager = new OrderQueueManager(
-      this.unlimitedXHR,
-      this.emitter
+      this.emitter,
+      this.placeOrderBatch.bind(this) // Pass the placeOrderBatch function
     );
 
     this.publicWebsocket = new BinancePublicWebsocket(this);
