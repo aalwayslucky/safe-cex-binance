@@ -837,7 +837,7 @@ export class BinanceExchange extends BaseExchange {
 
           data?.forEach?.((o: any) => {
             if (o.code) {
-              this.emitter.emit('error', o.msg);
+              this.emitter.emit('error', o.msg, o);
             } else {
               orderIds.push(o.clientOrderId);
             }
