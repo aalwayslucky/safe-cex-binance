@@ -2,14 +2,12 @@ import { Mutex } from 'async-mutex';
 
 class OrderQueueManager {
   private placeOrderBatchFast: (payloads: any[]) => Promise<string[]>;
-
   private queue: any[] = [];
   private mutex = new Mutex();
-  private ordersPer10s = 290;
-  private ordersPer60s = 1200;
-  private lastResetTime = Date.now();
   private processing = false;
   private results: string[] = [];
+  private orderTimestamps10s: number[] = []; // Array to store the timestamps of each order in the last 10 seconds
+  private orderTimestamps60s: number[] = []; // Array to store the timestamps of each order in the last 60 seconds
 
   constructor(
     private emitter: any,
@@ -31,6 +29,7 @@ class OrderQueueManager {
       release();
     }
   };
+
   isProcessing() {
     return this.processing;
   }
@@ -40,13 +39,7 @@ class OrderQueueManager {
     this.results = [];
     return resultsCopy;
   }
-  startEmittingQueueLength = () => {
-    setInterval(() => {
-      if (this.queue.length > 0) {
-        this.emitter.emit('error', this.queue.length);
-      }
-    }, 1000);
-  };
+
   private async startProcessing() {
     try {
       while (this.queue.length > 0) {
@@ -63,75 +56,62 @@ class OrderQueueManager {
     const sleep = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
 
-    const promises = []; // Array to hold all the promises
-
     while (this.queue.length > 0) {
+      // Remove timestamps older than 10 seconds and 60 seconds
       const now = Date.now();
-      const timeElapsed = now - this.lastResetTime;
+      this.orderTimestamps10s = this.orderTimestamps10s.filter(
+        (timestamp) => now - timestamp < 10000
+      );
+      this.orderTimestamps60s = this.orderTimestamps60s.filter(
+        (timestamp) => now - timestamp < 60000
+      );
 
-      // Reset rate limits based on time
-      if (timeElapsed >= 10000) {
-        // every 10 seconds
-        this.ordersPer10s = 290;
-      }
-      if (timeElapsed >= 60000) {
-        // every 60 seconds
-        this.ordersPer60s = 1200;
-        this.lastResetTime = now;
+      // Check if the number of orders in the last 10 seconds and 60 seconds is less than the limit
+      if (this.orderTimestamps10s.length >= 300 || this.orderTimestamps60s.length >= 1200) {
+        // If the limit is reached, wait until the oldest order is more than 10 seconds old
+        await sleep(now - Math.min(this.orderTimestamps10s[0], this.orderTimestamps60s[0]) + 1);
+        continue;
       }
 
       // Calculate the maximum batch size allowed by the rate limits
       const maxAllowedSize = Math.min(
-        this.ordersPer10s, // orders per 10 seconds
-        this.ordersPer60s, // orders per 60 seconds
+        300 - this.orderTimestamps10s.length, // orders per 10 seconds
+        1200 - this.orderTimestamps60s.length, // orders per 60 seconds
         this.queue.length,
         5
       );
 
       const release = await this.mutex.acquire();
-
       const batch = this.queue.splice(0, maxAllowedSize);
       release();
       this.emitter.emit('orderManager', this.queue.length); // Emit event after splice
 
-      // Update remaining limits
-      this.ordersPer10s -= batch.length;
-      this.ordersPer60s -= batch.length;
+      // Add new timestamps
+      for (let i = 0; i < batch.length; i++) {
+        this.orderTimestamps10s.push(now);
+        this.orderTimestamps60s.push(now);
+      }
 
       // Send the batch orders to the API
-      promises.push(
-        this.placeOrderBatchFast(batch)
-          .then((orderIds) => {
-            this.results.push(...orderIds);
-            this.emitter.emit('batchResolved', orderIds);
-
-          })
-          .catch((error) => {
-            this.emitter.emit('error', 'An unexpected error occurred:', error);
-          })
-      );
+      this.placeOrderBatchFast(batch)
+        .then((orderIds) => {
+          this.results.push(...orderIds);
+          this.emitter.emit('batchResolved', orderIds);
+        })
+        .catch((error) => {
+          this.emitter.emit('error', 'An unexpected error occurred:', error);
+        });
 
       // Adjust sleeping time based on the remaining rate limit
-      let waitTime;
-      if (this.ordersPer10s <= 0) {
-        waitTime = 10000 - (timeElapsed % 10000);
-      } else if (this.ordersPer60s <= 0) {
-        waitTime = 60000 - (timeElapsed % 60000);
-      }
+      const remainingTime10s = 10000 - (now - this.orderTimestamps10s[0]);
+      const remainingTime60s = 60000 - (now - this.orderTimestamps60s[0]);
+      const remainingLots10s = Math.floor((300 - this.orderTimestamps10s.length) / 5);
+      const remainingLots60s = Math.floor((1200 - this.orderTimestamps60s.length) / 5);
+      const sleepTime10s = remainingLots10s > 0 ? remainingTime10s / remainingLots10s : 1000;
+      const sleepTime60s = remainingLots60s > 0 ? remainingTime60s / remainingLots60s : 1000;
 
-      if (waitTime) {
-        await sleep(waitTime);
-      } else {
-        const remainingTime = 10000 - (timeElapsed % 10000);
-        const remainingLots = Math.floor(this.ordersPer10s / 5);
-        const sleepTime =
-          remainingLots > 0 ? remainingTime / remainingLots : 1000;
-
-        await sleep(sleepTime);
-      }
+      await sleep(Math.min(sleepTime10s, sleepTime60s));
     }
-
-    await Promise.all(promises);
   }
 }
 
