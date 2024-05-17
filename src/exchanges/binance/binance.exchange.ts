@@ -811,18 +811,18 @@ export class BinanceExchange extends BaseExchange {
 
   private placeOrderBatchFast = async (payloads: any[]) => {
     const lots = chunk(payloads, 5);
-    const orderIds = [] as string[];
-
+    const orderResults = [] as { orderId: string; error: any }[];
+  
     const promises = lots.map(async (lot) => {
       if (lot.length === 1) {
         try {
           await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
-          orderIds.push(lot[0].newClientOrderId);
+          orderResults.push({ orderId: lot[0].newClientOrderId, error: null });
         } catch (err: any) {
-          this.emitter.emit('error', err?.response?.data?.msg || err?.message);
+          orderResults.push({ orderId: lot[0].newClientOrderId, error: err?.response?.data?.msg || err?.message });
         }
       }
-
+  
       if (lot.length > 1) {
         try {
           const { data } = await this.unlimitedXHR.post(
@@ -830,26 +830,26 @@ export class BinanceExchange extends BaseExchange {
             {
               batchOrders: JSON.stringify(lot),
             }
-
           );
           await this.sleep(70);
-
-
+  
           data?.forEach?.((o: any) => {
             if (o.code) {
-              this.emitter.emit('error', o.msg, o);
+              orderResults.push({ orderId: o.clientOrderId, error: o });
             } else {
-              orderIds.push(o.clientOrderId);
+              orderResults.push({ orderId: o.clientOrderId, error: null });
             }
           });
         } catch (err: any) {
-          this.emitter.emit('error', err?.response?.data?.msg || err?.message);
+          lot.forEach((o: any) => {
+            orderResults.push({ orderId: o.newClientOrderId, error: err?.response?.data?.msg || err?.message });
+          });
         }
       }
     });
-
+  
     await Promise.all(promises);
-
-    return orderIds;
+  
+    return orderResults;
   };
 }

@@ -94,13 +94,13 @@ class OrderQueueManager {
 
       // Send the batch orders to the API
       this.placeOrderBatchFast(batch)
-        .then((orderIds) => {
-          this.results.push(...orderIds);
-          this.emitter.emit('batchResolved', orderIds);
-        })
-        .catch((error) => {
-          this.emitter.emit('error', 'An unexpected error occurred:', error);
-        });
+      .then((orderResults) => {
+        this.results.push(...orderResults);
+        this.emitter.emit('batchResolved', orderResults);
+      })
+      .catch((error) => {
+        this.emitter.emit('error', 'An unexpected error occurred:', error);
+      });
 
       // Adjust sleeping time based on the remaining rate limit
       const remainingTime10s = 10000 - (now - this.orderTimestamps10s[0]);
