@@ -84,7 +84,8 @@ class OrderQueueManager {
       const maxAllowedSize = Math.min(
         this.ordersPer10s, // orders per 10 seconds
         this.ordersPer60s, // orders per 60 seconds
-        this.queue.length
+        this.queue.length,
+        5
       );
 
       const release = await this.mutex.acquire();
