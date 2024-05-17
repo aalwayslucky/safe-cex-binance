@@ -832,7 +832,7 @@ export class BinanceExchange extends BaseExchange {
             }
 
           );
-          await this.sleep(20);
+          await this.sleep(70);
 
 
           data?.forEach?.((o: any) => {
