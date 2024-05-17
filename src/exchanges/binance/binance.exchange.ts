@@ -805,6 +805,10 @@ export class BinanceExchange extends BaseExchange {
 
     return orderIds;
   };
+  private sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   private placeOrderBatchFast = async (payloads: any[]) => {
     const lots = chunk(payloads, 5);
     const orderIds = [] as string[];
@@ -826,7 +830,10 @@ export class BinanceExchange extends BaseExchange {
             {
               batchOrders: JSON.stringify(lot),
             }
+
           );
+          await this.sleep(20);
+
 
           data?.forEach?.((o: any) => {
             if (o.code) {
