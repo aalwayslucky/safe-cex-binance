@@ -102,6 +102,8 @@ class OrderQueueManager {
         this.placeOrderBatchFast(batch)
           .then((orderIds) => {
             this.results.push(...orderIds);
+            this.emitter.emit('batchResolved', orderIds);
+
           })
           .catch((error) => {
             this.emitter.emit('error', 'An unexpected error occurred:', error);
