@@ -606,9 +606,9 @@ export class BinanceExchange extends BaseExchange {
     while (this.orderQueueManager.isProcessing()) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-
+    const data = this.orderQueueManager.getResults();
     // Return the results
-    return this.orderQueueManager.getResults();
+    return data
   };
 
   // eslint-disable-next-line complexity

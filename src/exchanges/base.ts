@@ -127,11 +127,11 @@ export class BaseExchange implements Exchange {
     const orderIds = await mapSeries(orders, (order) => this.placeOrder(order));
     return orderIds.flat();
   };
+
   placeOrdersFast = async (orders: PlaceOrderOpts[]) => {
     const orderIds = await mapSeries(orders, (order) => this.placeOrder(order));
     return orderIds.flat();
   };
-
   updateOrder = async (_opts: UpdateOrderOpts) => {
     await Promise.reject(new Error('Not implemented'));
     return [] as string[];

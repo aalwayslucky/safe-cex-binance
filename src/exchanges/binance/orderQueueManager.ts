@@ -1,7 +1,7 @@
 import { Mutex } from 'async-mutex';
 
 class OrderQueueManager {
-  private placeOrderBatchFast: (payloads: any[]) => Promise<string[]>;
+  private placeOrderBatchFast: (payloads: any[]) => Promise<{ orderId: string; error: any }[]>;
   private queue: any[] = [];
   private mutex = new Mutex();
   private processing = false;
@@ -11,8 +11,7 @@ class OrderQueueManager {
 
   constructor(
     private emitter: any,
-    placeOrderBatchFast: (payloads: any[]) => Promise<string[]>
-  ) {
+    placeOrderBatchFast: (payloads: any[]) => Promise<{ orderId: string; error: any }[]>  ) {
     this.placeOrderBatchFast = placeOrderBatchFast;
   }
 
@@ -94,10 +93,12 @@ class OrderQueueManager {
 
       // Send the batch orders to the API
       this.placeOrderBatchFast(batch)
-      .then((orderResults) => {
-        this.results.push(...orderResults);
-        this.emitter.emit('batchResolved', orderResults);
-      })
+  .then((orderResults) => {
+  const successfulOrderIds = orderResults
+    .filter(orderResult => orderResult.error === null)
+    .map(orderResult => orderResult.orderId);
+  this.results.push(...successfulOrderIds);
+})
       .catch((error) => {
         this.emitter.emit('error', 'An unexpected error occurred:', error);
       });
