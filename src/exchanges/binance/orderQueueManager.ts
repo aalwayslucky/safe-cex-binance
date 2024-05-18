@@ -98,7 +98,7 @@ class OrderQueueManager {
     .filter(orderResult => orderResult.error === null)
     .map(orderResult => orderResult.orderId);
   this.results.push(...successfulOrderIds);
-  this.emitter.emit('orderManager', orderResults); // Emit successful order IDs
+  this.emitter.emit('batchResolved', orderResults); // Emit successful order IDs
 
 })
       .catch((error) => {
