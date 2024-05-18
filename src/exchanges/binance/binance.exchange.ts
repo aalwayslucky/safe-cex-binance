@@ -812,44 +812,46 @@ export class BinanceExchange extends BaseExchange {
   private placeOrderBatchFast = async (payloads: any[]) => {
     const lots = chunk(payloads, 5);
     const orderResults = [] as { orderId: string; error: any }[];
-  
+
     const promises = lots.map(async (lot) => {
-      if (lot.length === 1) {
-        try {
-          await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
-          orderResults.push({ orderId: lot[0].newClientOrderId, error: null });
-        } catch (err: any) {
-          orderResults.push({ orderId: lot[0].newClientOrderId, error: err?.response?.data?.msg || err?.message });
-        }
-      }
-  
-      if (lot.length > 1) {
-        try {
-          const { data } = await this.unlimitedXHR.post(
-            ENDPOINTS.BATCH_ORDERS,
-            {
-              batchOrders: JSON.stringify(lot),
+        if (lot.length === 1) {
+            try {
+                await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
+                orderResults.push({ orderId: lot[0].newClientOrderId, error: null });
+            } catch (err: any) {
+                orderResults.push({ orderId: lot[0].newClientOrderId, error: err?.response?.data?.msg || err?.message });
             }
-          );
-          await this.sleep(70);
-  
-          data?.forEach?.((o: any) => {
-            if (o.code) {
-              orderResults.push({ orderId: o.clientOrderId, error: o });
-            } else {
-              orderResults.push({ orderId: o.clientOrderId, error: null });
-            }
-          });
-        } catch (err: any) {
-          lot.forEach((o: any) => {
-            orderResults.push({ orderId: o.newClientOrderId, error: err?.response?.data?.msg || err?.message });
-          });
         }
-      }
+
+        if (lot.length > 1) {
+            try {
+                const { data } = await this.unlimitedXHR.post(
+                    ENDPOINTS.BATCH_ORDERS,
+                    {
+                        batchOrders: JSON.stringify(lot),
+                    }
+                );
+                await this.sleep(70);
+
+                data?.forEach?.((o: any, index: number) => {
+                    const originalOrder = lot[index];
+                    if (o.code) {
+                        orderResults.push({ orderId: originalOrder.newClientOrderId, error: o });
+                    } else {
+                        orderResults.push({ orderId: originalOrder.newClientOrderId, error: null });
+                    }
+                });
+            } catch (err: any) {
+                lot.forEach((o: any) => {
+                    orderResults.push({ orderId: o.newClientOrderId, error: err?.response?.data?.msg || err?.message });
+                });
+            }
+        }
     });
-  
+
     await Promise.all(promises);
-  
+
     return orderResults;
-  };
+};
+
 }
