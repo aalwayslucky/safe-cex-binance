@@ -13,6 +13,7 @@ import type {
   Candle,
   ExchangeOptions,
   Market,
+  MutableBalance,
   OHLCVOptions,
   Order,
   OrderBook,
@@ -325,27 +326,53 @@ export class BinanceExchange extends BaseExchange {
     }
   };
 
-  fetchBalanceAndPositions = async () => {
+  fetchBalanceAndPositions =  async () => {
     try {
       const { data } = await this.xhr.get<
         Record<string, any> & { positions: Array<Record<string, any>> }
       >(ENDPOINTS.ACCOUNT);
 
-      const balance = {
-        total: parseFloat(data.totalWalletBalance),
+      const balance:MutableBalance = {
+        total: 0,
         free: parseFloat(data.availableBalance),
         used: parseFloat(data.totalInitialMargin),
         upnl: parseFloat(data.totalUnrealizedProfit),
-        assets: data.assets
-        .filter((asset: any) => parseFloat(asset.walletBalance) > 0)
-        .map((asset: any) => ({
-          asset: asset.asset,
-          walletBalance: parseFloat(asset.walletBalance),
-        })),
-    };
+        assets: []
+      };
       // We need to filter out positions that corresponds to
       // markets that are not supported by safe-cex
+      let totalUsdValue = 0;
 
+      for (const assetData of data.assets) {
+        const walletBalance = parseFloat(assetData.walletBalance);
+  
+        // Only process assets with a non-zero wallet balance
+        if (walletBalance > 0) {
+          const asset = assetData.asset;
+          let usdValue = walletBalance;
+  
+          // Calculate USD value for non-stablecoin assets
+          if (!["USDC", "USDT", "FDUSD"].includes(asset)) {
+            const symbol = asset + "USDT";
+            const ticker = this.store.tickers.find((t) => t.symbol === symbol);
+            if (!ticker) {
+              throw new Error(`Ticker ${symbol} not found`);
+            }
+            usdValue = ticker.last * walletBalance;
+          }
+  
+          // Add the asset details to the assets array
+          balance.assets.push({
+            symbol:asset,
+            walletBalance,
+            usdValue,
+          });
+  
+          // Accumulate the total USD value
+          balance.total = totalUsdValue;
+        }
+      }
+  
       const supportedPositions = data.positions.filter((p) =>
         this.store.markets.some((m) => m.symbol === p.symbol)
       );

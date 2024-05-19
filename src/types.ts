@@ -44,6 +44,7 @@ export type TokenBucketConfig = {
 export type WalletAsset = {
   readonly symbol: string;
   readonly walletBalance: number;
+  readonly usdValue: number;
 };
 export type Balance = {
   readonly used: number;
@@ -53,7 +54,20 @@ export type Balance = {
   readonly assets: WalletAsset[];
 
 };
+// Mutable version for internal processing
+export type MutableWalletAsset = {
+  symbol: string;
+  walletBalance: number;
+  usdValue: number;
+};
 
+export type MutableBalance = {
+  used: number;
+  free: number;
+  total: number;
+  upnl: number;
+  assets: MutableWalletAsset[];
+};
 export type Market = {
   readonly id: string;
   readonly symbol: string;
