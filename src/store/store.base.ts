@@ -12,7 +12,7 @@ import type { Store } from './store.interface';
 
 export const defaultStore: StoreData = {
   latency: 0,
-  balance: { used: 0, free: 0, total: 0, upnl: 0 },
+  balance: { used: 0, free: 0, total: 0, upnl: 0, assets: []},
   markets: [],
   tickers: [],
   positions: [],
@@ -157,6 +157,10 @@ export class DefaultStore implements Store {
       this.updateInArray('positions', idx, changes);
       this.notify();
     }
+  };
+  updateBalance = (balance: StoreData['balance']) => {
+    this.state.balance = balance;
+    this.notify();
   };
 
   updatePositions = (

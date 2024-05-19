@@ -18,11 +18,12 @@ export interface Store {
   updatePositions: (
     updates: Array<[Pick<Position, 'side' | 'symbol'>, Partial<Position>]>
   ) => void;
+  updateBalance: (balance: StoreData['balance']) => void;
 
   addOrder: (order: Order) => void;
   addOrUpdateOrder: (order: Order) => void;
   addOrUpdateOrders: (orders: Order[]) => void;
-
+  
   updateTicker: (ticker: Pick<Ticker, 'id'>, changes: Partial<Ticker>) => void;
   addOrUpdateTickers: (tickers: Ticker[]) => void;
 

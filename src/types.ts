@@ -41,11 +41,17 @@ export type TokenBucketConfig = {
   readonly tenSeconds: BucketConfig;
   readonly sixtySeconds: BucketConfig;
 };
+export type WalletAsset = {
+  readonly symbol: string;
+  readonly walletBalance: number;
+};
 export type Balance = {
   readonly used: number;
   readonly free: number;
   readonly total: number;
   readonly upnl: number;
+  readonly assets: WalletAsset[];
+
 };
 
 export type Market = {

@@ -336,8 +336,13 @@ export class BinanceExchange extends BaseExchange {
         free: parseFloat(data.availableBalance),
         used: parseFloat(data.totalInitialMargin),
         upnl: parseFloat(data.totalUnrealizedProfit),
-      };
-
+        assets: data.assets
+        .filter((asset: any) => parseFloat(asset.walletBalance) > 0)
+        .map((asset: any) => ({
+          asset: asset.asset,
+          walletBalance: parseFloat(asset.walletBalance),
+        })),
+    };
       // We need to filter out positions that corresponds to
       // markets that are not supported by safe-cex
 
