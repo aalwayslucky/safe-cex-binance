@@ -1,4 +1,5 @@
 import type {
+  Balance,
   Market,
   Order,
   Position,
@@ -158,10 +159,41 @@ export class DefaultStore implements Store {
       this.notify();
     }
   };
-  updateBalance = (balance: StoreData['balance']) => {
-    this.state.balance = balance;
-    this.notify();
+updateBalance = (balance: StoreData['balance']) => {
+  // Recalculate usdValue for each asset
+  const newAssets = balance.assets.map(asset => {
+    let usdValue = asset.walletBalance;
+
+    if (!["USDC", "USDT", "FDUSD"].includes(asset.symbol)) {
+      const symbol = asset.symbol + "USDT";
+      const ticker = this.state.tickers.find((t) => t.symbol === symbol);
+      if (!ticker) {
+        throw new Error(`Ticker ${symbol} not found`);
+      }
+      usdValue = ticker.last * asset.walletBalance;
+    }
+
+    return {
+      ...asset,
+      usdValue: usdValue,
+    };
+  });
+
+  // Recalculate total
+  const total = newAssets.reduce(
+    (sum, asset) => sum + asset.usdValue,
+    0
+  );
+
+  const newBalance: Balance = {
+    ...balance,
+    assets: newAssets,
+    total: total,
   };
+
+  this.state.balance = newBalance;
+  this.notify();
+};
 
   updatePositions = (
     updates: Array<[Pick<Position, 'side' | 'symbol'>, Partial<Position>]>

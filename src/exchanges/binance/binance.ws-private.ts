@@ -1,4 +1,4 @@
-import { OrderStatus } from '../../types';
+import { OrderStatus, WalletAsset } from '../../types';
 import { jsonParse } from '../../utils/json-parse';
 import { BaseWebSocket } from '../base.ws';
 
@@ -102,20 +102,21 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
   };
 
   handleAccountEvents = (events: Array<Record<string, any>>) => {
-    events.forEach((event) =>
+    events.forEach((event) => {
+      // Handle position updates
       event.a.B.forEach((p: Record<string, any>) => {
         const symbol = p.s;
         const side = POSITION_SIDE[p.ps];
-
+  
         const position = this.parent.store.positions.find(
           (p2) => p2.symbol === symbol && p2.side === side
         );
-
+  
         if (position) {
           const entryPrice = parseFloat(p.ep);
           const contracts = parseFloat(p.pa);
           const upnl = parseFloat(p.up);
-
+  
           this.store.updatePosition(position, {
             entryPrice,
             contracts,
@@ -123,8 +124,29 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
             unrealizedPnl: upnl,
           });
         }
-      })
-    );
+      });
+  
+  // Handle balance updates
+event.a.B.forEach((b: Record<string, any>) => {
+  const symbol = b.a;
+  const walletBalance = parseFloat(b.wb);
+
+  const assetIndex = this.parent.store.balance.assets.findIndex(
+    (a) => a.symbol === symbol
+  );
+
+  if (assetIndex !== -1) {
+    const newAsset: WalletAsset = {
+      ...this.parent.store.balance.assets[assetIndex],
+      walletBalance: walletBalance,
+    };
+
+    this.parent.store.balance.assets[assetIndex] = newAsset;
+  }
+});
+
+this.parent.store.updateBalance(this.parent.store.balance);
+    });
   };
 
   private fetchListenKey = async () => {
