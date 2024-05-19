@@ -341,7 +341,6 @@ export class BinanceExchange extends BaseExchange {
       };
       // We need to filter out positions that corresponds to
       // markets that are not supported by safe-cex
-      let totalUsdValue = 0;
 
       for (const assetData of data.assets) {
         const walletBalance = parseFloat(assetData.walletBalance);
@@ -369,10 +368,10 @@ export class BinanceExchange extends BaseExchange {
           });
   
           // Accumulate the total USD value
-          balance.total = totalUsdValue;
         }
       }
-  
+      balance.total = balance.assets.reduce((sum, asset) => sum + asset.usdValue, 0);
+
       const supportedPositions = data.positions.filter((p) =>
         this.store.markets.some((m) => m.symbol === p.symbol)
       );
