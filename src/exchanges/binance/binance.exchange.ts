@@ -318,7 +318,6 @@ export class BinanceExchange extends BaseExchange {
         upnl: parseFloat(data.totalUnrealizedProfit),
         assets: [],
       };
-      let totalUsdValue = 0;
 
       for (const assetData of data.assets) {
         const walletBalance = parseFloat(assetData.walletBalance);
@@ -346,7 +345,10 @@ export class BinanceExchange extends BaseExchange {
           });
 
           // Accumulate the total USD value
-          balance.total = totalUsdValue;
+          balance.total = balance.assets.reduce(
+            (sum, asset) => sum + asset.usdValue,
+            0
+          );
         }
       }
 

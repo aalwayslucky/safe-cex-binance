@@ -1,30 +1,30 @@
-import { OrderStatus } from '../../types';
-import { jsonParse } from '../../utils/json-parse';
-import { BaseWebSocket } from '../base.ws';
+import { OrderStatus, WalletAsset } from "../../types";
+import { jsonParse } from "../../utils/json-parse";
+import { BaseWebSocket } from "../base.ws";
 
-import type { BinanceExchange } from './binance.exchange';
+import type { BinanceExchange } from "./binance.exchange";
 import {
   BASE_WS_URL,
   ENDPOINTS,
   ORDER_SIDE,
   ORDER_TYPE,
   POSITION_SIDE,
-} from './binance.types';
+} from "./binance.types";
 
 export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
   connectAndSubscribe = async () => {
     if (!this.isDisposed) {
       const listenKey = await this.fetchListenKey();
 
-      const key = this.parent.options.testnet ? 'testnet' : 'livenet';
+      const key = this.parent.options.testnet ? "testnet" : "livenet";
       const base = BASE_WS_URL.private[key];
 
       const url = `${base}/${listenKey}`;
 
       this.ws = new WebSocket(url);
-      this.ws.addEventListener('message', this.onMessage);
-      this.ws.addEventListener('close', this.onClose);
-      this.ws.addEventListener('open', this.onOpen);
+      this.ws.addEventListener("message", this.onMessage);
+      this.ws.addEventListener("close", this.onClose);
+      this.ws.addEventListener("open", this.onOpen);
     }
   };
 
@@ -38,8 +38,8 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
     if (!this.isDisposed) {
       const json = jsonParse(data);
 
-      if (json?.e === 'ACCOUNT_UPDATE') this.handleAccountEvents([json]);
-      if (json?.e === 'ORDER_TRADE_UPDATE') this.handleOrderEvents([json]);
+      if (json?.e === "ACCOUNT_UPDATE") this.handleAccountEvents([json]);
+      if (json?.e === "ORDER_TRADE_UPDATE") this.handleOrderEvents([json]);
 
       if (json?.id === 42) {
         const diff = performance.now() - this.pingAt;
@@ -58,14 +58,14 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
   ping = () => {
     if (!this.isDisposed) {
       this.pingAt = performance.now();
-      this.ws?.send?.(JSON.stringify({ id: 42, method: 'LIST_SUBSCRIPTIONS' }));
+      this.ws?.send?.(JSON.stringify({ id: 42, method: "LIST_SUBSCRIPTIONS" }));
     }
   };
 
   handleOrderEvents = (events: Array<Record<string, any>>) => {
     events.forEach(({ o: data }) => {
-      if (data.X === 'PARTIALLY_FILLED' || data.X === 'FILLED') {
-        this.parent.emitter.emit('fill', {
+      if (data.X === "PARTIALLY_FILLED" || data.X === "FILLED") {
+        this.parent.emitter.emit("fill", {
           id: data.c,
           timestamp: data.T,
           side: ORDER_SIDE[data.S],
@@ -74,13 +74,13 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
           realizedPnl: parseFloat(data.rp),
           amount: parseFloat(data.l),
           reduceOnly: data.R || false,
-          maker: data.m ,
+          maker: data.m,
           notional: parseFloat(data.l) * parseFloat(data.ap),
           ...(data.n && { commission: parseFloat(data.n) }), // Add condition to check if commission exists
         });
       }
 
-      if (data.X === 'NEW') {
+      if (data.X === "NEW") {
         this.store.addOrUpdateOrder({
           id: data.c,
           status: OrderStatus.Open,
@@ -95,14 +95,19 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
         });
       }
 
-      if (data.X === 'CANCELED' || data.X === 'FILLED' || data.X === 'EXPIRED') {
+      if (
+        data.X === "CANCELED" ||
+        data.X === "FILLED" ||
+        data.X === "EXPIRED"
+      ) {
         this.store.removeOrder({ id: data.c });
       }
     });
   };
 
   handleAccountEvents = (events: Array<Record<string, any>>) => {
-    events.forEach((event) =>
+    events.forEach((event) => {
+      // Handle position updates
       event.a.B.forEach((p: Record<string, any>) => {
         const symbol = p.s;
         const side = POSITION_SIDE[p.ps];
@@ -123,8 +128,29 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
             unrealizedPnl: upnl,
           });
         }
-      })
-    );
+      });
+
+      // Handle balance updates
+      event.a.B.forEach((b: Record<string, any>) => {
+        const symbol = b.a;
+        const walletBalance = parseFloat(b.wb);
+
+        const assetIndex = this.parent.store.balance.assets.findIndex(
+          (a) => a.symbol === symbol
+        );
+
+        if (assetIndex !== -1) {
+          const newAsset: WalletAsset = {
+            ...this.parent.store.balance.assets[assetIndex],
+            walletBalance: walletBalance,
+          };
+
+          this.parent.store.balance.assets[assetIndex] = newAsset;
+        }
+      });
+
+      this.parent.store.updateBalance(this.parent.store.balance);
+    });
   };
 
   private fetchListenKey = async () => {
