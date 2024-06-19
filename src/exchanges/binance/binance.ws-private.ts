@@ -108,7 +108,9 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
   handleAccountEvents = (events: Array<Record<string, any>>) => {
     events.forEach((event) => {
       // Handle position updates
-      event.a.B.forEach((p: Record<string, any>) => {
+      this.parent.emitter.emit("fill", event);
+
+      event.a.P.forEach((p: Record<string, any>) => {
         const symbol = p.s;
         const side = POSITION_SIDE[p.ps];
 
