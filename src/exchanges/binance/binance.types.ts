@@ -41,6 +41,25 @@ export const ENDPOINTS = {
   LISTEN_KEY: '/fapi/v1/listenKey',
   ORDERBOOK: '/fapi/v1/depth',
 };
+export const WEIGHTS = {
+  BALANCE: 5,
+  MARKETS: 1,
+  ACCOUNT: 5,
+  POSITIONS: 5,
+  LEVERAGE_BRACKET: 1,
+  TICKERS_24H: 40,
+  TICKERS_BOOK: 5,
+  TICKERS_PRICE: 5,
+  HEDGE_MODE: 1,
+  SET_LEVERAGE: 1,
+  OPEN_ORDERS: 40,
+  CANCEL_SYMBOL_ORDERS: 1,
+  ORDER: 0,
+  BATCH_ORDERS: 5,
+  KLINE: 5,
+  LISTEN_KEY: 1,
+  ORDERBOOK: 10,
+};
 
 export const PUBLIC_ENDPOINTS = [
   ENDPOINTS.MARKETS,

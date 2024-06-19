@@ -13,6 +13,7 @@ import type { Store } from './store.interface';
 
 export const defaultStore: StoreData = {
   latency: 0,
+  weightAPI: 0,
   balance: { used: 0, free: 0, total: 0, upnl: 0, assets: []},
   markets: [],
   tickers: [],
@@ -36,6 +37,9 @@ export class DefaultStore implements Store {
 
   get latency() {
     return this.state.latency;
+  }
+  get weightAPI() {
+    return this.state.weightAPI;
   }
 
   get balance() {

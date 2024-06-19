@@ -256,6 +256,7 @@ export type StoreOptions = {
 
 export type StoreData = {
   readonly latency: number;
+  readonly weightAPI: number;
   readonly balance: Balance;
   readonly markets: Market[];
   readonly tickers: Ticker[];
