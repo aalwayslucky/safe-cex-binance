@@ -1,6 +1,4 @@
-export type ExchangeName =
-  | 'binance'
-
+export type ExchangeName = "binance";
 
 export type ExtraExchangeOptions = {
   [key in ExchangeName]?: {
@@ -35,6 +33,7 @@ export type Balance = {
   readonly free: number;
   readonly total: number;
   readonly upnl: number;
+  readonly assets: WalletAsset[];
 };
 
 export type Market = {
@@ -73,31 +72,35 @@ export type Ticker = {
   readonly volume: number;
   readonly quoteVolume: number;
 };
-
+export type WalletAsset = {
+  readonly symbol: string;
+  readonly walletBalance: number;
+  readonly usdValue: number;
+};
 export enum OrderStatus {
-  Open = 'open',
-  Closed = 'closed',
-  Canceled = 'canceled',
+  Open = "open",
+  Closed = "closed",
+  Canceled = "canceled",
 }
 
 export enum OrderType {
-  Market = 'market',
-  Limit = 'limit',
-  StopLoss = 'stop_market',
-  TakeProfit = 'take_profit_market',
-  TrailingStopLoss = 'trailing_stop_market',
+  Market = "market",
+  Limit = "limit",
+  StopLoss = "stop_market",
+  TakeProfit = "take_profit_market",
+  TrailingStopLoss = "trailing_stop_market",
 }
 
 export enum OrderSide {
-  Buy = 'buy',
-  Sell = 'sell',
+  Buy = "buy",
+  Sell = "sell",
 }
 
 export enum OrderTimeInForce {
-  GoodTillCancel = 'GoodTillCancel',
-  ImmediateOrCancel = 'ImmediateOrCancel',
-  FillOrKill = 'FillOrKill',
-  PostOnly = 'PostOnly',
+  GoodTillCancel = "GoodTillCancel",
+  ImmediateOrCancel = "ImmediateOrCancel",
+  FillOrKill = "FillOrKill",
+  PostOnly = "PostOnly",
 }
 
 export type Order = {
@@ -114,8 +117,8 @@ export type Order = {
   readonly reduceOnly: boolean;
 };
 export enum PositionSide {
-  Long = 'long',
-  Short = 'short',
+  Long = "long",
+  Short = "short",
 }
 
 export type Position = {
@@ -130,18 +133,18 @@ export type Position = {
 };
 
 export type Timeframe =
-  | '1d'
-  | '1h'
-  | '1m'
-  | '1w'
-  | '2h'
-  | '3m'
-  | '4h'
-  | '5m'
-  | '6h'
-  | '12h'
-  | '15m'
-  | '30m';
+  | "1d"
+  | "1h"
+  | "1m"
+  | "1w"
+  | "2h"
+  | "3m"
+  | "4h"
+  | "5m"
+  | "6h"
+  | "12h"
+  | "15m"
+  | "30m";
 
 export type Candle = {
   readonly timestamp: number;
@@ -178,7 +181,6 @@ export type OHLCVOptions = {
 };
 
 export type OrderFillEvent = {
-
   readonly id: string;
   readonly side: OrderSide;
   readonly parentId?: string | undefined;
@@ -192,12 +194,11 @@ export type OrderFillEvent = {
   readonly timestamp: number;
   readonly maker: boolean;
   readonly notional: number;
-
 };
 export enum LogSeverity {
-  Info = 'info',
-  Warning = 'warning',
-  Error = 'error',
+  Info = "info",
+  Warning = "warning",
+  Error = "error",
 }
 
 export type OrderBookOrders = {
@@ -265,4 +266,16 @@ export type ExchangeAccount = {
   readonly userId: string;
   readonly subId?: string | null;
   readonly affiliateId?: string | null;
+};
+export type MutableWalletAsset = {
+  symbol: string;
+  walletBalance: number;
+  usdValue: number;
+};
+export type MutableBalance = {
+  used: number;
+  free: number;
+  total: number;
+  upnl: number;
+  assets: MutableWalletAsset[];
 };
