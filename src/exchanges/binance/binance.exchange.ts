@@ -406,7 +406,7 @@ export class BinanceExchange extends BaseExchange {
       const orders: Order[] = data.map((o) => {
         const order = {
           id: v(o, "clientOrderId"),
-          clientID: v(o, "clientOrderId"),
+          orderId: v(o, "orderId"),
           status: OrderStatus.Open,
           symbol: o.symbol,
           type: ORDER_TYPE[o.type],
