@@ -105,6 +105,7 @@ export enum OrderTimeInForce {
 
 export type Order = {
   readonly id: string;
+  readonly clientID: string;
   readonly parentId?: string;
   readonly status: OrderStatus;
   readonly symbol: string;
