@@ -83,6 +83,7 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
       if (data.X === "NEW") {
         this.store.addOrUpdateOrder({
           id: data.c,
+          clientID: data.C,
           status: OrderStatus.Open,
           symbol: data.s,
           type: ORDER_TYPE[data.ot],
