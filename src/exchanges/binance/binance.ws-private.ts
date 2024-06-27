@@ -131,6 +131,12 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
             notional: contracts * entryPrice + upnl,
             unrealizedPnl: upnl,
           });
+          this.parent.emitter.emit('positionUpdate', {
+            entryPrice,
+            contracts,
+            notional: contracts * entryPrice + upnl,
+            unrealizedPnl: upnl,
+          });
         }
       });
 
