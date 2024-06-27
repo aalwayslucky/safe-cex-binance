@@ -9,7 +9,6 @@ import {
   ENDPOINTS,
   ORDER_SIDE,
   ORDER_TYPE,
-  POSITION_SIDE,
 } from './binance.types';
 
 export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
@@ -115,11 +114,12 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
         this.parent.emitter.emit('positionUpdate', 'starting update positions');
 
         const symbol = p.s;
-        const side = POSITION_SIDE[p.ps];
 
         const position = this.parent.store.positions.find(
-          (p2) => p2.symbol === symbol && p2.side === side
+          (p2) => p2.symbol === symbol
         );
+        if (!position)
+          this.emitter.emit('positionUpdate', 'position not found');
 
         if (position) {
           this.emitter.emit('positionUpdate', 'position found');

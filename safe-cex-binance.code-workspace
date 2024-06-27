@@ -22,7 +22,7 @@
       "titleBar.activeBackground": "#0f1503",
       "titleBar.activeForeground": "#e7e7e7",
       "titleBar.inactiveBackground": "#0f150399",
-      "titleBar.inactiveForeground": "#e7e7e799",
+      "titleBar.inactiveForeground": "#e7e7e799"
     },
     "peacock.remoteColor": "#0f1503",
     "editor.codeActionsOnSave": {
