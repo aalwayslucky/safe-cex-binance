@@ -6,10 +6,10 @@ import type {
   StoreData,
   Ticker,
   Writable,
-} from "../types";
-import { clone } from "../utils/clone";
+} from '../types';
+import { clone } from '../utils/clone';
 
-import type { Store } from "./store.interface";
+import type { Store } from './store.interface';
 
 export const defaultStore: StoreData = {
   latency: 0,
@@ -70,13 +70,13 @@ export class DefaultStore implements Store {
     Object.assign(this.state, changes);
     this.notify();
   };
-  updateBalance = (balance: StoreData["balance"]) => {
+  updateBalance = (balance: StoreData['balance']) => {
     // Recalculate usdValue for each asset
     const newAssets = balance.assets.map((asset) => {
       let usdValue = asset.walletBalance;
 
-      if (!["USDC", "USDT", "FDUSD"].includes(asset.symbol)) {
-        const symbol = asset.symbol + "USDT";
+      if (!['USDC', 'USDT', 'FDUSD'].includes(asset.symbol)) {
+        const symbol = `${asset.symbol}USDT`;
         const ticker = this.state.tickers.find((t) => t.symbol === symbol);
         if (!ticker) {
           throw new Error(`Ticker ${symbol} not found`);
@@ -86,7 +86,7 @@ export class DefaultStore implements Store {
 
       return {
         ...asset,
-        usdValue: usdValue,
+        usdValue,
       };
     });
 
@@ -96,7 +96,7 @@ export class DefaultStore implements Store {
     const newBalance: Balance = {
       ...balance,
       assets: newAssets,
-      total: total,
+      total,
     };
 
     this.state.balance = newBalance;
@@ -113,7 +113,7 @@ export class DefaultStore implements Store {
     return () => this.listeners.delete(cb);
   };
 
-  removeOrders = (orders: Array<Pick<Order, "id">>) => {
+  removeOrders = (orders: Array<Pick<Order, 'id'>>) => {
     orders.forEach((order) => {
       const idx = this.state.orders.findIndex((o) => o.id === order.id);
       if (idx > -1) this.state.orders.splice(idx, 1);
@@ -122,7 +122,7 @@ export class DefaultStore implements Store {
     this.notify();
   };
 
-  removeOrder = (order: Pick<Order, "id">) => {
+  removeOrder = (order: Pick<Order, 'id'>) => {
     const idx = this.state.orders.findIndex((o) => o.id === order.id);
 
     if (idx > -1) {
@@ -131,11 +131,11 @@ export class DefaultStore implements Store {
     }
   };
 
-  updateOrder = (order: Pick<Order, "id">, changes: Partial<Order>) => {
+  updateOrder = (order: Pick<Order, 'id'>, changes: Partial<Order>) => {
     const idx = this.state.orders.findIndex((o) => o.id === order.id);
 
     if (idx > -1) {
-      this.updateInArray("orders", idx, changes);
+      this.updateInArray('orders', idx, changes);
       this.notify();
     }
   };
@@ -146,9 +146,9 @@ export class DefaultStore implements Store {
   };
 
   addOrUpdateOrder = (order: Order) => {
-    const idx = this.state.orders.findIndex((o) => o.id === order.id);
+    const idx = this.state.orders.findIndex((o) => o.orderId === order.orderId);
     if (idx > -1) {
-      this.updateInArray("orders", idx, order);
+      this.updateInArray('orders', idx, order);
     } else {
       this.state.orders.push(order);
     }
@@ -159,7 +159,7 @@ export class DefaultStore implements Store {
     orders.forEach((order) => {
       const idx = this.state.orders.findIndex((o) => o.id === order.id);
       if (idx > -1) {
-        this.updateInArray("orders", idx, order);
+        this.updateInArray('orders', idx, order);
       } else {
         this.state.orders.push(order);
       }
@@ -167,7 +167,7 @@ export class DefaultStore implements Store {
     this.notify();
   };
 
-  removePosition = (position: Pick<Position, "side" | "symbol">) => {
+  removePosition = (position: Pick<Position, 'side' | 'symbol'>) => {
     const idx = this.state.positions.findIndex(
       (p) => p.side === position.side && p.symbol === position.symbol
     );
@@ -179,7 +179,7 @@ export class DefaultStore implements Store {
   };
 
   updatePosition = (
-    position: Pick<Position, "side" | "symbol">,
+    position: Pick<Position, 'side' | 'symbol'>,
     changes: Partial<Position>
   ) => {
     const idx = this.state.positions.findIndex(
@@ -187,13 +187,13 @@ export class DefaultStore implements Store {
     );
 
     if (idx > -1) {
-      this.updateInArray("positions", idx, changes);
+      this.updateInArray('positions', idx, changes);
       this.notify();
     }
   };
 
   updatePositions = (
-    updates: Array<[Pick<Position, "side" | "symbol">, Partial<Position>]>
+    updates: Array<[Pick<Position, 'side' | 'symbol'>, Partial<Position>]>
   ) => {
     const idexesChanges = updates.map(([position, changes]) => {
       const idx = this.state.positions.findIndex(
@@ -204,17 +204,17 @@ export class DefaultStore implements Store {
 
     if (idexesChanges.some(([idx]) => idx !== -1)) {
       idexesChanges.forEach(([idx, changes]) =>
-        this.updateInArray("positions", idx, changes)
+        this.updateInArray('positions', idx, changes)
       );
       this.notify();
     }
   };
 
-  updateTicker = (ticker: Pick<Ticker, "id">, changes: Partial<Ticker>) => {
+  updateTicker = (ticker: Pick<Ticker, 'id'>, changes: Partial<Ticker>) => {
     const idx = this.state.tickers.findIndex((t) => t.id === ticker.id);
 
     if (idx > -1) {
-      this.updateInArray("tickers", idx, changes);
+      this.updateInArray('tickers', idx, changes);
       this.notify();
     }
   };
@@ -223,7 +223,7 @@ export class DefaultStore implements Store {
     tickers.forEach((ticker) => {
       const idx = this.state.tickers.findIndex((o) => o.id === ticker.id);
       if (idx > -1) {
-        this.updateInArray("tickers", idx, ticker);
+        this.updateInArray('tickers', idx, ticker);
       } else {
         this.state.tickers.push(ticker);
       }
@@ -231,16 +231,16 @@ export class DefaultStore implements Store {
     this.notify();
   };
 
-  updateMarket = (market: Pick<Market, "id">, changes: Partial<Market>) => {
+  updateMarket = (market: Pick<Market, 'id'>, changes: Partial<Market>) => {
     const idx = this.state.markets.findIndex((m) => m.id === market.id);
 
     if (idx > -1) {
-      this.updateInArray("markets", idx, changes);
+      this.updateInArray('markets', idx, changes);
       this.notify();
     }
   };
 
-  setSetting = (key: keyof StoreData["options"], value: boolean) => {
+  setSetting = (key: keyof StoreData['options'], value: boolean) => {
     if (this.state.options[key] !== value) {
       this.state.options[key] = value;
       this.notify();
@@ -248,7 +248,7 @@ export class DefaultStore implements Store {
   };
 
   private updateInArray = <
-    K extends "markets" | "orders" | "positions" | "tickers",
+    K extends 'markets' | 'orders' | 'positions' | 'tickers',
   >(
     key: K,
     idx: number,
