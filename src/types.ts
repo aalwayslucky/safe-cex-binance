@@ -181,7 +181,16 @@ export type OHLCVOptions = {
   readonly to?: number;
   readonly limit?: number;
 };
-
+export type ModifiedOrder = {
+  readonly id: string;
+  readonly orderId: number;
+  readonly symbol: string;
+  readonly type: OrderType;
+  readonly side: OrderSide;
+  price: number;
+  amount: number;
+  readonly reduceOnly: boolean;
+};
 export type OrderFillEvent = {
   readonly id: string;
   readonly side: OrderSide;

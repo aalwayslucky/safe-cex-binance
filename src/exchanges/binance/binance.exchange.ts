@@ -13,6 +13,7 @@ import type {
   Candle,
   ExchangeOptions,
   Market,
+  ModifiedOrder,
   MutableBalance,
   OHLCVOptions,
   Order,
@@ -583,7 +584,7 @@ export class BinanceExchange extends BaseExchange {
   };
 
   updateOrder = async ({ order, update }: UpdateOrderOpts) => {
-    const newOrder = {
+    const newOrder: ModifiedOrder = {
       symbol: order.symbol,
       type: order.type,
       side: order.side,
@@ -591,6 +592,7 @@ export class BinanceExchange extends BaseExchange {
       amount: order.amount,
       reduceOnly: order.reduceOnly || false,
       orderId: order.orderId,
+      id: order.id,
     };
 
     if ('price' in update) newOrder.price = update.price;
@@ -604,7 +606,7 @@ export class BinanceExchange extends BaseExchange {
     return await this.placeOrderBatch(payloads);
   };
 
-  modifyOrder = async (opts: PlaceOrderOpts) => {
+  modifyOrder = async (opts: ModifiedOrder) => {
     const payload = this.formatModifyOrder(opts);
     return await this.placeOrderSingle(payload);
   };
@@ -614,7 +616,7 @@ export class BinanceExchange extends BaseExchange {
     return await this.placeOrderBatch(requests);
   };
 
-  private formatModifyOrder = (opts: PlaceOrderOpts) => {
+  private formatModifyOrder = (opts: ModifiedOrder) => {
     const market = this.store.markets.find(({ symbol }) => {
       return symbol === opts.symbol;
     });
@@ -626,9 +628,8 @@ export class BinanceExchange extends BaseExchange {
     const pSide = this.getOrderPositionSide(opts);
 
     const pPrice = market.precision.price;
-    const timeInForce = opts.timeInForce
-      ? inverseObj(TIME_IN_FORCE)[opts.timeInForce]
-      : inverseObj(TIME_IN_FORCE)[OrderTimeInForce.GoodTillCancel];
+    const timeInForce =
+      inverseObj(TIME_IN_FORCE)[OrderTimeInForce.GoodTillCancel];
 
     // We use price only for limit orders
     // Market order should not define price
