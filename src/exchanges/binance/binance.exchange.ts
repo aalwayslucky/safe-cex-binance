@@ -625,8 +625,6 @@ export class BinanceExchange extends BaseExchange {
       throw new Error(`Market ${opts.symbol} not found`);
     }
 
-    const pSide = this.getOrderPositionSide(opts);
-
     const pPrice = market.precision.price;
 
     // We use price only for limit orders
@@ -640,7 +638,6 @@ export class BinanceExchange extends BaseExchange {
 
     const req = omitUndefined({
       symbol: opts.symbol,
-      positionSide: pSide,
       orderId: opts.orderId,
       side: inverseObj(ORDER_SIDE)[opts.side],
       quantity: opts.amount,
