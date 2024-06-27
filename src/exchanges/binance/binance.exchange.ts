@@ -844,9 +844,11 @@ export class BinanceExchange extends BaseExchange {
   };
   private placeOrderSingle = async (payload: any) => {
     try {
-      await this.unlimitedXHR.post(ENDPOINTS.ORDER, payload);
+      const { data } = await this.unlimitedXHR.post(ENDPOINTS.ORDER, payload);
+      return data.orderId;
     } catch (err: any) {
       this.emitter.emit('error', err?.response?.data?.msg || err?.message);
+      return [];
     }
   };
 }
