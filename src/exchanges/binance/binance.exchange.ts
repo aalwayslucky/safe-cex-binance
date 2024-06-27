@@ -606,7 +606,7 @@ export class BinanceExchange extends BaseExchange {
 
   modifyOrder = async (opts: PlaceOrderOpts) => {
     const payload = this.formatModifyOrder(opts);
-    return await this.placeOrderBatch([payload]);
+    return await this.placeOrderSingle(payload);
   };
 
   placeOrders = async (orders: PlaceOrderOpts[]) => {
@@ -841,5 +841,12 @@ export class BinanceExchange extends BaseExchange {
     }
 
     return orderIds;
+  };
+  private placeOrderSingle = async (payload: any) => {
+    try {
+      await this.unlimitedXHR.post(ENDPOINTS.ORDER, payload);
+    } catch (err: any) {
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
+    }
   };
 }
