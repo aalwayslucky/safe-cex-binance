@@ -175,6 +175,7 @@ export class BaseExchange implements Exchange {
           type: OrderType.StopLoss,
           price: o.stopLoss,
           amount: o.amount,
+          orderId: o.orderId,
         });
       }
 
@@ -185,6 +186,7 @@ export class BaseExchange implements Exchange {
           type: OrderType.TakeProfit,
           price: o.takeProfit,
           amount: o.amount,
+          orderId: o.orderId,
         });
       }
 

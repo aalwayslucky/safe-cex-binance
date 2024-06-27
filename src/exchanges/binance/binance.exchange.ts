@@ -1,14 +1,14 @@
-import type { Axios } from "axios";
-import rateLimit from "axios-rate-limit";
-import type { ManipulateType } from "dayjs";
-import dayjs from "dayjs";
-import chunk from "lodash/chunk";
-import groupBy from "lodash/groupBy";
-import omit from "lodash/omit";
-import times from "lodash/times";
-import { forEachSeries } from "p-iteration";
+import type { Axios } from 'axios';
+import rateLimit from 'axios-rate-limit';
+import type { ManipulateType } from 'dayjs';
+import dayjs from 'dayjs';
+import chunk from 'lodash/chunk';
+import groupBy from 'lodash/groupBy';
+import omit from 'lodash/omit';
+import times from 'lodash/times';
+import { forEachSeries } from 'p-iteration';
 
-import type { Store } from "../../store/store.interface";
+import type { Store } from '../../store/store.interface';
 import type {
   Candle,
   ExchangeOptions,
@@ -21,35 +21,35 @@ import type {
   Position,
   Ticker,
   UpdateOrderOpts,
-} from "../../types";
+} from '../../types';
 import {
   OrderTimeInForce,
   PositionSide,
   OrderSide,
   OrderStatus,
   OrderType,
-} from "../../types";
-import { v } from "../../utils/get-key";
-import { inverseObj } from "../../utils/inverse-obj";
-import { loop } from "../../utils/loop";
-import { omitUndefined } from "../../utils/omit-undefined";
-import { adjust, subtract } from "../../utils/safe-math";
-import { uuid } from "../../utils/uuid";
-import { BaseExchange } from "../base";
+} from '../../types';
+import { v } from '../../utils/get-key';
+import { inverseObj } from '../../utils/inverse-obj';
+import { loop } from '../../utils/loop';
+import { omitUndefined } from '../../utils/omit-undefined';
+import { adjust, subtract } from '../../utils/safe-math';
+import { uuid } from '../../utils/uuid';
+import { BaseExchange } from '../base';
 
-import { createAPI } from "./binance.api";
+import { createAPI } from './binance.api';
 import {
   ORDER_TYPE,
   ORDER_SIDE,
   POSITION_SIDE,
   ENDPOINTS,
   TIME_IN_FORCE,
-} from "./binance.types";
-import { BinancePrivateWebsocket } from "./binance.ws-private";
-import { BinancePublicWebsocket } from "./binance.ws-public";
+} from './binance.types';
+import { BinancePrivateWebsocket } from './binance.ws-private';
+import { BinancePublicWebsocket } from './binance.ws-public';
 
 export class BinanceExchange extends BaseExchange {
-  name = "BINANCE";
+  name = 'BINANCE';
 
   xhr: Axios;
   unlimitedXHR: Axios;
@@ -84,12 +84,12 @@ export class BinanceExchange extends BaseExchange {
   validateAccount = async () => {
     try {
       await this.xhr.get(ENDPOINTS.ACCOUNT);
-      return "";
+      return '';
     } catch (err: any) {
-      this.emitter.emit("error", err?.response?.data?.msg || err?.message);
-      return err?.message?.toLowerCase()?.includes?.("network error")
-        ? "Error while contacting Binance API"
-        : err?.response?.data?.msg || "Invalid API key or secret";
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
+      return err?.message?.toLowerCase()?.includes?.('network error')
+        ? 'Error while contacting Binance API'
+        : err?.response?.data?.msg || 'Invalid API key or secret';
     }
   };
 
@@ -123,7 +123,7 @@ export class BinanceExchange extends BaseExchange {
     this.privateWebsocket.connectAndSubscribe();
 
     // fetch current position mode (Hedge/One-way)
-    this.store.setSetting("isHedged", await this.fetchPositionMode());
+    this.store.setSetting('isHedged', await this.fetchPositionMode());
 
     // start ticking live data
     // balance, tickers, positions
@@ -160,7 +160,7 @@ export class BinanceExchange extends BaseExchange {
           },
         });
       } catch (err: any) {
-        this.emitter.emit("error", err?.message);
+        this.emitter.emit('error', err?.message);
       }
 
       loop(() => this.tick(), this.options.extra?.tickInterval);
@@ -180,19 +180,19 @@ export class BinanceExchange extends BaseExchange {
       );
       // delisted symbols
       const unwantedSymbols = [
-        "BTSUSDT",
-        "TOMOUSDT",
-        "SCUSDT",
-        "HNTUSDT",
-        "SRMUSDT",
-        "FTTUSDT",
-        "RAYUSDT",
-        "CVCUSDT",
-        "COCOSUSDT",
-        "STRAXUSDT",
-        "DGBUSDT",
-        "CTKUSDT",
-        "ANTUSDT",
+        'BTSUSDT',
+        'TOMOUSDT',
+        'SCUSDT',
+        'HNTUSDT',
+        'SRMUSDT',
+        'FTTUSDT',
+        'RAYUSDT',
+        'CVCUSDT',
+        'COCOSUSDT',
+        'STRAXUSDT',
+        'DGBUSDT',
+        'CTKUSDT',
+        'ANTUSDT',
       ];
 
       const filteredSymbols = symbols.filter(
@@ -201,51 +201,51 @@ export class BinanceExchange extends BaseExchange {
       const markets: Market[] = filteredSymbols
         .filter(
           (m) =>
-            v(m, "contractType") === "PERPETUAL" &&
-            v(m, "marginAsset") === "USDT"
+            v(m, 'contractType') === 'PERPETUAL' &&
+            v(m, 'marginAsset') === 'USDT'
         )
         .map((m) => {
           const p = m.filters.find(
-            (f: any) => v(f, "filterType") === "PRICE_FILTER"
+            (f: any) => v(f, 'filterType') === 'PRICE_FILTER'
           );
 
           const amt = m.filters.find(
-            (f: any) => v(f, "filterType") === "LOT_SIZE"
+            (f: any) => v(f, 'filterType') === 'LOT_SIZE'
           );
 
           const mAmt = m.filters.find(
-            (f: any) => v(f, "filterType") === "MARKET_LOT_SIZE"
+            (f: any) => v(f, 'filterType') === 'MARKET_LOT_SIZE'
           );
 
           const { brackets } = data.find((b) => b.symbol === m.symbol)!;
-          const baseAsset = v(m, "baseAsset");
-          const quoteAsset = v(m, "quoteAsset");
-          const marginAsset = v(m, "marginAsset");
+          const baseAsset = v(m, 'baseAsset');
+          const quoteAsset = v(m, 'quoteAsset');
+          const marginAsset = v(m, 'marginAsset');
 
           return {
             id: `${baseAsset}/${quoteAsset}:${marginAsset}`,
             symbol: m.symbol,
             base: baseAsset,
             quote: quoteAsset,
-            active: m.status === "TRADING",
+            active: m.status === 'TRADING',
             precision: {
-              amount: parseFloat(v(amt, "stepSize")),
-              price: parseFloat(v(p, "tickSize")),
+              amount: parseFloat(v(amt, 'stepSize')),
+              price: parseFloat(v(p, 'tickSize')),
             },
             limits: {
               amount: {
                 min: Math.max(
-                  parseFloat(v(amt, "minQty")),
-                  parseFloat(v(mAmt, "minQty"))
+                  parseFloat(v(amt, 'minQty')),
+                  parseFloat(v(mAmt, 'minQty'))
                 ),
                 max: Math.min(
-                  parseFloat(v(amt, "maxQty")),
-                  parseFloat(v(mAmt, "maxQty"))
+                  parseFloat(v(amt, 'maxQty')),
+                  parseFloat(v(mAmt, 'maxQty'))
                 ),
               },
               leverage: {
                 min: 1,
-                max: v(brackets[0], "initialLeverage"),
+                max: v(brackets[0], 'initialLeverage'),
               },
             },
           };
@@ -253,7 +253,7 @@ export class BinanceExchange extends BaseExchange {
 
       return markets;
     } catch (err: any) {
-      this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
       return this.store.markets;
     }
   };
@@ -283,15 +283,15 @@ export class BinanceExchange extends BaseExchange {
         const ticker = {
           id: market.id,
           symbol: market.symbol,
-          bid: parseFloat(v(book, "bidPrice")),
-          ask: parseFloat(v(book, "askPrice")),
-          last: parseFloat(v(daily, "lastPrice")),
-          mark: parseFloat(v(price, "markPrice")),
-          index: parseFloat(v(price, "indexPrice")),
-          percentage: parseFloat(v(daily, "priceChangePercent")),
-          fundingRate: parseFloat(v(price, "lastFundingRate")),
+          bid: parseFloat(v(book, 'bidPrice')),
+          ask: parseFloat(v(book, 'askPrice')),
+          last: parseFloat(v(daily, 'lastPrice')),
+          mark: parseFloat(v(price, 'markPrice')),
+          index: parseFloat(v(price, 'indexPrice')),
+          percentage: parseFloat(v(daily, 'priceChangePercent')),
+          fundingRate: parseFloat(v(price, 'lastFundingRate')),
           volume: parseFloat(daily.volume),
-          quoteVolume: parseFloat(v(daily, "quoteVolume")),
+          quoteVolume: parseFloat(v(daily, 'quoteVolume')),
           openInterest: 0, // Binance doesn't provides all tickers data
         };
 
@@ -300,7 +300,7 @@ export class BinanceExchange extends BaseExchange {
 
       return tickers;
     } catch (err: any) {
-      this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
       return this.store.tickers;
     }
   };
@@ -328,8 +328,8 @@ export class BinanceExchange extends BaseExchange {
           let usdValue = walletBalance;
 
           // Calculate USD value for non-stablecoin assets
-          if (!["USDC", "USDT", "FDUSD"].includes(asset)) {
-            const symbol = asset + "USDT";
+          if (!['USDC', 'USDT', 'FDUSD'].includes(asset)) {
+            const symbol = `${asset}USDT`;
             const ticker = this.store.tickers.find((t) => t.symbol === symbol);
             if (!ticker) {
               throw new Error(`Ticker ${symbol} not found`);
@@ -360,10 +360,10 @@ export class BinanceExchange extends BaseExchange {
       );
 
       const positions: Position[] = supportedPositions.map((p) => {
-        const entryPrice = parseFloat(v(p, "entryPrice"));
-        const contracts = parseFloat(v(p, "positionAmt"));
-        const upnl = parseFloat(v(p, "unrealizedProfit"));
-        const pSide = v(p, "positionSide");
+        const entryPrice = parseFloat(v(p, 'entryPrice'));
+        const contracts = parseFloat(v(p, 'positionAmt'));
+        const upnl = parseFloat(v(p, 'unrealizedProfit'));
+        const pSide = v(p, 'positionSide');
 
         // If account is not on hedge mode,
         // we need to define the side of the position with the contracts amount
@@ -379,7 +379,7 @@ export class BinanceExchange extends BaseExchange {
           leverage: parseFloat(p.leverage),
           unrealizedPnl: upnl,
           contracts: Math.abs(contracts),
-          liquidationPrice: parseFloat(v(p, "liquidationPrice")),
+          liquidationPrice: parseFloat(v(p, 'liquidationPrice')),
         };
       });
 
@@ -388,7 +388,7 @@ export class BinanceExchange extends BaseExchange {
         balance,
       };
     } catch (err: any) {
-      this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
 
       return {
         positions: this.store.positions,
@@ -405,17 +405,17 @@ export class BinanceExchange extends BaseExchange {
 
       const orders: Order[] = data.map((o) => {
         const order = {
-          id: v(o, "clientOrderId"),
-          orderId: v(o, "orderId"),
+          id: v(o, 'clientOrderId'),
+          orderId: v(o, 'orderId'),
           status: OrderStatus.Open,
           symbol: o.symbol,
           type: ORDER_TYPE[o.type],
           side: ORDER_SIDE[o.side],
-          price: parseFloat(o.price) || parseFloat(v(o, "stopPrice")),
-          amount: parseFloat(v(o, "origQty")),
-          reduceOnly: v(o, "reduceOnly") || false,
-          filled: parseFloat(v(o, "executedQty")),
-          remaining: subtract(v(o, "origQty"), v(o, "executedQty")),
+          price: parseFloat(o.price) || parseFloat(v(o, 'stopPrice')),
+          amount: parseFloat(v(o, 'origQty')),
+          reduceOnly: v(o, 'reduceOnly') || false,
+          filled: parseFloat(v(o, 'executedQty')),
+          remaining: subtract(v(o, 'origQty'), v(o, 'executedQty')),
         };
 
         return order;
@@ -423,7 +423,7 @@ export class BinanceExchange extends BaseExchange {
 
       return orders;
     } catch (err: any) {
-      this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
       return this.store.orders;
     }
   };
@@ -484,19 +484,19 @@ export class BinanceExchange extends BaseExchange {
   changePositionMode = async (hedged: boolean) => {
     if (this.store.positions.filter((p) => p.contracts > 0).length > 0) {
       this.emitter.emit(
-        "error",
-        "Please close all positions before switching position mode"
+        'error',
+        'Please close all positions before switching position mode'
       );
       return;
     }
 
     try {
       await this.xhr.post(ENDPOINTS.HEDGE_MODE, {
-        dualSidePosition: hedged ? "true" : "false",
+        dualSidePosition: hedged ? 'true' : 'false',
       });
-      this.store.setSetting("isHedged", hedged);
+      this.store.setSetting('isHedged', hedged);
     } catch (err: any) {
-      this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
     }
   };
 
@@ -524,14 +524,14 @@ export class BinanceExchange extends BaseExchange {
           [{ symbol, side: PositionSide.Short }, { leverage }],
         ]);
       } catch (err: any) {
-        this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+        this.emitter.emit('error', err?.response?.data?.msg || err?.message);
       }
     }
   };
 
   cancelOrders = async (orders: Order[]) => {
     try {
-      const groupedBySymbol = groupBy(orders, "symbol");
+      const groupedBySymbol = groupBy(orders, 'symbol');
       const requests = Object.entries(groupedBySymbol).map(
         ([symbol, symbolOrders]) => ({
           symbol,
@@ -564,7 +564,7 @@ export class BinanceExchange extends BaseExchange {
         );
       });
     } catch (err: any) {
-      this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
     }
   };
 
@@ -578,7 +578,7 @@ export class BinanceExchange extends BaseExchange {
         this.store.orders.filter((o) => o.symbol === symbol)
       );
     } catch (err: any) {
-      this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+      this.emitter.emit('error', err?.response?.data?.msg || err?.message);
     }
   };
 
@@ -590,13 +590,13 @@ export class BinanceExchange extends BaseExchange {
       price: order.price,
       amount: order.amount,
       reduceOnly: order.reduceOnly || false,
+      orderId: order.orderId,
     };
 
-    if ("price" in update) newOrder.price = update.price;
-    if ("amount" in update) newOrder.amount = update.amount;
+    if ('price' in update) newOrder.price = update.price;
+    if ('amount' in update) newOrder.amount = update.amount;
 
-    await this.cancelOrders([order]);
-    return await this.placeOrder(newOrder);
+    return await this.modifyOrder(newOrder);
   };
 
   placeOrder = async (opts: PlaceOrderOpts) => {
@@ -604,11 +604,50 @@ export class BinanceExchange extends BaseExchange {
     return await this.placeOrderBatch(payloads);
   };
 
+  modifyOrder = async (opts: PlaceOrderOpts) => {
+    const payload = this.formatModifyOrder(opts);
+    return await this.placeOrderBatch([payload]);
+  };
+
   placeOrders = async (orders: PlaceOrderOpts[]) => {
     const requests = orders.flatMap((o) => this.formatCreateOrder(o));
     return await this.placeOrderBatch(requests);
   };
 
+  private formatModifyOrder = (opts: PlaceOrderOpts) => {
+    const market = this.store.markets.find(({ symbol }) => {
+      return symbol === opts.symbol;
+    });
+
+    if (!market) {
+      throw new Error(`Market ${opts.symbol} not found`);
+    }
+
+    const pSide = this.getOrderPositionSide(opts);
+
+    const pPrice = market.precision.price;
+
+    // We use price only for limit orders
+    // Market order should not define price
+    const price =
+      opts.price && opts.type !== OrderType.Market
+        ? adjust(opts.price, pPrice)
+        : undefined;
+
+    // Binance stopPrice only for SL or TP orders
+
+    const req = omitUndefined({
+      symbol: opts.symbol,
+      orderId: opts.orderId,
+      positionSide: pSide,
+      side: inverseObj(ORDER_SIDE)[opts.side],
+      type: inverseObj(ORDER_TYPE)[opts.type],
+      quantity: opts.amount,
+      price,
+    });
+
+    return req;
+  };
   // eslint-disable-next-line complexity
   private formatCreateOrder = (opts: PlaceOrderOpts) => {
     if (opts.type === OrderType.TrailingStopLoss) {
@@ -642,7 +681,7 @@ export class BinanceExchange extends BaseExchange {
         : undefined;
 
     // Binance stopPrice only for SL or TP orders
-    const priceField = isStopOrTP ? "stopPrice" : "price";
+    const priceField = isStopOrTP ? 'stopPrice' : 'price';
 
     const reduceOnly = !this.store.options.isHedged && opts.reduceOnly;
     const timeInForce = opts.timeInForce
@@ -657,8 +696,8 @@ export class BinanceExchange extends BaseExchange {
       quantity: amount ? `${amount}` : undefined,
       [priceField]: price ? `${price}` : undefined,
       timeInForce: opts.type === OrderType.Limit ? timeInForce : undefined,
-      closePosition: isStopOrTP ? "true" : undefined,
-      reduceOnly: reduceOnly && !isStopOrTP ? "true" : undefined,
+      closePosition: isStopOrTP ? 'true' : undefined,
+      reduceOnly: reduceOnly && !isStopOrTP ? 'true' : undefined,
     });
 
     const lots = amount > maxSize ? Math.ceil(amount / maxSize) : 1;
@@ -677,27 +716,27 @@ export class BinanceExchange extends BaseExchange {
 
     if (opts.stopLoss) {
       payloads.push({
-        ...omit(req, "price"),
+        ...omit(req, 'price'),
         side: inverseObj(ORDER_SIDE)[
           opts.side === OrderSide.Buy ? OrderSide.Sell : OrderSide.Buy
         ],
         type: inverseObj(ORDER_TYPE)[OrderType.StopLoss],
         stopPrice: `${opts.stopLoss}`,
-        timeInForce: "GTC",
-        closePosition: "true",
+        timeInForce: 'GTC',
+        closePosition: 'true',
       });
     }
 
     if (opts.takeProfit) {
       payloads.push({
-        ...omit(req, "price"),
+        ...omit(req, 'price'),
         side: inverseObj(ORDER_SIDE)[
           opts.side === OrderSide.Buy ? OrderSide.Sell : OrderSide.Buy
         ],
         type: inverseObj(ORDER_TYPE)[OrderType.TakeProfit],
         stopPrice: `${opts.takeProfit}`,
-        timeInForce: "GTC",
-        closePosition: "true",
+        timeInForce: 'GTC',
+        closePosition: 'true',
       });
     }
 
@@ -744,7 +783,7 @@ export class BinanceExchange extends BaseExchange {
       type: inverseObj(ORDER_TYPE)[OrderType.TrailingStopLoss],
       quantity: `${position.contracts}`,
       callbackRate: `${distancePercentage}`,
-      priceProtect: "true",
+      priceProtect: 'true',
       newClientOrderId: uuid(),
     };
 
@@ -752,12 +791,12 @@ export class BinanceExchange extends BaseExchange {
   };
 
   private getOrderPositionSide = (opts: PlaceOrderOpts) => {
-    let positionSide = "BOTH";
+    let positionSide = 'BOTH';
 
     // We need to specify side of the position to interract with
     // if we are in hedged mode on the binance account
     if (this.store.options.isHedged) {
-      positionSide = opts.side === OrderSide.Buy ? "LONG" : "SHORT";
+      positionSide = opts.side === OrderSide.Buy ? 'LONG' : 'SHORT';
 
       if (
         opts.type === OrderType.StopLoss ||
@@ -765,7 +804,7 @@ export class BinanceExchange extends BaseExchange {
         opts.type === OrderType.TrailingStopLoss ||
         opts.reduceOnly
       ) {
-        positionSide = positionSide === "LONG" ? "SHORT" : "LONG";
+        positionSide = positionSide === 'LONG' ? 'SHORT' : 'LONG';
       }
     }
 
@@ -782,7 +821,7 @@ export class BinanceExchange extends BaseExchange {
           await this.unlimitedXHR.post(ENDPOINTS.ORDER, lot[0]);
           orderIds.push(lot[0].newClientOrderId);
         } catch (err: any) {
-          this.emitter.emit("error", err?.response?.data?.msg || err?.message);
+          this.emitter.emit('error', err?.response?.data?.msg || err?.message);
         }
       }
 
@@ -793,7 +832,7 @@ export class BinanceExchange extends BaseExchange {
 
         data?.forEach?.((o: any) => {
           if (o.code) {
-            this.emitter.emit("error", o.msg);
+            this.emitter.emit('error', o.msg);
           } else {
             orderIds.push(o.clientOrderId);
           }

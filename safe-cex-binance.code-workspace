@@ -1,0 +1,32 @@
+{
+  "folders": [
+    {
+      "path": ".",
+    },
+  ],
+  "settings": {
+    "workbench.colorCustomizations": {
+      "activityBar.activeBackground": "#2f4209",
+      "activityBar.background": "#2f4209",
+      "activityBar.foreground": "#e7e7e7",
+      "activityBar.inactiveForeground": "#e7e7e799",
+      "activityBarBadge.background": "#1778a8",
+      "activityBarBadge.foreground": "#e7e7e7",
+      "commandCenter.border": "#e7e7e799",
+      "sash.hoverBorder": "#2f4209",
+      "statusBar.background": "#0f1503",
+      "statusBar.foreground": "#e7e7e7",
+      "statusBarItem.hoverBackground": "#2f4209",
+      "statusBarItem.remoteBackground": "#0f1503",
+      "statusBarItem.remoteForeground": "#e7e7e7",
+      "titleBar.activeBackground": "#0f1503",
+      "titleBar.activeForeground": "#e7e7e7",
+      "titleBar.inactiveBackground": "#0f150399",
+      "titleBar.inactiveForeground": "#e7e7e799",
+    },
+    "peacock.remoteColor": "#0f1503",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "always",
+    },
+  },
+}
