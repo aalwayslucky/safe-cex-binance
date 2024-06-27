@@ -110,8 +110,10 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
   handleAccountEvents = (events: Array<Record<string, any>>) => {
     events.forEach((event) => {
       // Handle position updates
-
+      this.parent.emitter.emit('positionUpdate', 'event received ');
       event.a.P.forEach((p: Record<string, any>) => {
+        this.parent.emitter.emit('positionUpdate', 'starting update positions');
+
         const symbol = p.s;
         const side = POSITION_SIDE[p.ps];
 
@@ -120,6 +122,7 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
         );
 
         if (position) {
+          this.emitter.emit('positionUpdate', 'position found');
           const entryPrice = parseFloat(p.ep);
           const contracts = parseFloat(p.pa);
           const upnl = parseFloat(p.up);
@@ -130,12 +133,7 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
             notional: contracts * entryPrice + upnl,
             unrealizedPnl: upnl,
           });
-          this.parent.emitter.emit('positionUpdate', {
-            entryPrice,
-            contracts,
-            notional: contracts * entryPrice + upnl,
-            unrealizedPnl: upnl,
-          });
+          this.emitter.emit('positionUpdate', 'position updated');
         }
       });
 
