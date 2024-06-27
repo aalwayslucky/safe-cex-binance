@@ -626,6 +626,9 @@ export class BinanceExchange extends BaseExchange {
     const pSide = this.getOrderPositionSide(opts);
 
     const pPrice = market.precision.price;
+    const timeInForce = opts.timeInForce
+      ? inverseObj(TIME_IN_FORCE)[opts.timeInForce]
+      : inverseObj(TIME_IN_FORCE)[OrderTimeInForce.GoodTillCancel];
 
     // We use price only for limit orders
     // Market order should not define price
@@ -641,6 +644,8 @@ export class BinanceExchange extends BaseExchange {
       orderId: opts.orderId,
       positionSide: pSide,
       side: inverseObj(ORDER_SIDE)[opts.side],
+      timeInForce: opts.type === OrderType.Limit ? timeInForce : undefined,
+
       type: inverseObj(ORDER_TYPE)[opts.type],
       quantity: opts.amount,
       price,
