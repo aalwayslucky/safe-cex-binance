@@ -1,30 +1,31 @@
-import { OrderStatus, WalletAsset } from "../../types";
-import { jsonParse } from "../../utils/json-parse";
-import { BaseWebSocket } from "../base.ws";
+import type { WalletAsset } from '../../types';
+import { OrderStatus } from '../../types';
+import { jsonParse } from '../../utils/json-parse';
+import { BaseWebSocket } from '../base.ws';
 
-import type { BinanceExchange } from "./binance.exchange";
+import type { BinanceExchange } from './binance.exchange';
 import {
   BASE_WS_URL,
   ENDPOINTS,
   ORDER_SIDE,
   ORDER_TYPE,
   POSITION_SIDE,
-} from "./binance.types";
+} from './binance.types';
 
 export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
   connectAndSubscribe = async () => {
     if (!this.isDisposed) {
       const listenKey = await this.fetchListenKey();
 
-      const key = this.parent.options.testnet ? "testnet" : "livenet";
+      const key = this.parent.options.testnet ? 'testnet' : 'livenet';
       const base = BASE_WS_URL.private[key];
 
       const url = `${base}/${listenKey}`;
 
       this.ws = new WebSocket(url);
-      this.ws.addEventListener("message", this.onMessage);
-      this.ws.addEventListener("close", this.onClose);
-      this.ws.addEventListener("open", this.onOpen);
+      this.ws.addEventListener('message', this.onMessage);
+      this.ws.addEventListener('close', this.onClose);
+      this.ws.addEventListener('open', this.onOpen);
     }
   };
 
@@ -38,8 +39,8 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
     if (!this.isDisposed) {
       const json = jsonParse(data);
 
-      if (json?.e === "ACCOUNT_UPDATE") this.handleAccountEvents([json]);
-      if (json?.e === "ORDER_TRADE_UPDATE") this.handleOrderEvents([json]);
+      if (json?.e === 'ACCOUNT_UPDATE') this.handleAccountEvents([json]);
+      if (json?.e === 'ORDER_TRADE_UPDATE') this.handleOrderEvents([json]);
 
       if (json?.id === 42) {
         const diff = performance.now() - this.pingAt;
@@ -58,14 +59,14 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
   ping = () => {
     if (!this.isDisposed) {
       this.pingAt = performance.now();
-      this.ws?.send?.(JSON.stringify({ id: 42, method: "LIST_SUBSCRIPTIONS" }));
+      this.ws?.send?.(JSON.stringify({ id: 42, method: 'LIST_SUBSCRIPTIONS' }));
     }
   };
 
   handleOrderEvents = (events: Array<Record<string, any>>) => {
     events.forEach(({ o: data }) => {
-      if (data.X === "PARTIALLY_FILLED" || data.X === "FILLED") {
-        this.parent.emitter.emit("fill", {
+      if (data.X === 'PARTIALLY_FILLED' || data.X === 'FILLED') {
+        this.parent.emitter.emit('fill', {
           id: data.c,
           timestamp: data.T,
           side: ORDER_SIDE[data.S],
@@ -80,7 +81,7 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
         });
       }
 
-      if (data.X === "NEW") {
+      if (data.X === 'NEW' || data.X === 'AMENDMENT') {
         this.store.addOrUpdateOrder({
           id: data.c,
           orderId: data.i,
@@ -97,9 +98,9 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
       }
 
       if (
-        data.X === "CANCELED" ||
-        data.X === "FILLED" ||
-        data.X === "EXPIRED"
+        data.X === 'CANCELED' ||
+        data.X === 'FILLED' ||
+        data.X === 'EXPIRED'
       ) {
         this.store.removeOrder({ id: data.c });
       }
@@ -109,7 +110,7 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
   handleAccountEvents = (events: Array<Record<string, any>>) => {
     events.forEach((event) => {
       // Handle position updates
-      this.parent.emitter.emit("positionUpdate", event);
+      this.parent.emitter.emit('positionUpdate', event);
 
       event.a.P.forEach((p: Record<string, any>) => {
         const symbol = p.s;
@@ -145,7 +146,7 @@ export class BinancePrivateWebsocket extends BaseWebSocket<BinanceExchange> {
         if (assetIndex !== -1) {
           const newAsset: WalletAsset = {
             ...this.parent.store.balance.assets[assetIndex],
-            walletBalance: walletBalance,
+            walletBalance,
           };
 
           this.parent.store.balance.assets[assetIndex] = newAsset;
