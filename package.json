@@ -7,11 +7,11 @@
     "dev": "tsc -w",
     "lint-ts": "tsc --noEmit",
     "lint-js": "eslint --ext .js,.ts src",
-    "lint": "npm run lint-ts && npm run lint-js",
+    "lint": "pnpm run lint-ts && pnpm run lint-js",
     "build": "rimraf dist && tsc",
-    "changelog": "npx conventional-changelog-cli -p angular -i CHANGELOG.md -s -r 0",
-    "prepublish": "npm run build",
-    "postpublish": "npm run changelog"
+    "changelog": "pnpx conventional-changelog-cli -p angular -i CHANGELOG.md -s -r 0",
+    "prepublish": "pnpm run build",
+    "postpublish": "pnpm run changelog"
   },
   "files": [
     "dist"
